@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
-import { DAILY_STRETCHES, getTotalStretchTime } from "@/lib/stretching-data";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { getStretchesForWorkout, getTotalStretchTime } from "@/lib/stretching-data";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Play, ExternalLink, Timer, Check, StretchHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { getUserPreferences, getNextSplitDay } from "@/lib/user-preferences";
+import { fetchWorkoutHistory } from "@/lib/cloud-data";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { hapticSuccess } from "@/lib/haptics";
 
@@ -16,6 +19,23 @@ export default function DailyStretchCard() {
   const [loading, setLoading] = useState(false);
 
   const todayStr = new Date().toISOString().split("T")[0];
+
+  // Same query key as NextSessionCard — React Query deduplicates the fetch
+  const prefs = user ? getUserPreferences(user.id) : null;
+  const { data: history = [] } = useQuery({
+    queryKey: ["workout-history", user?.id],
+    queryFn: fetchWorkoutHistory,
+    enabled: !!user,
+  });
+
+  // Determine next workout to pick relevant stretches
+  const nextWorkoutId = useMemo(() => {
+    if (!prefs?.schedule?.length) return "fullbody";
+    const recent = history.map((h) => h.workoutId);
+    return getNextSplitDay(prefs.schedule, recent).next.workoutId;
+  }, [prefs, history]);
+
+  const stretches = useMemo(() => getStretchesForWorkout(nextWorkoutId), [nextWorkoutId]);
 
   // Check if stretches completed today
   useEffect(() => {
@@ -39,8 +59,8 @@ export default function DailyStretchCard() {
     if (!error) {
       setCompletedToday(true);
       hapticSuccess();
-      toast.success("Daily stretches complete! 🧘", {
-        description: "Great work keeping your body limber.",
+      toast.success("Stretches done! 🧘", {
+        description: "Your body will thank you for it.",
       });
     }
   }, [user, completedToday, loading, todayStr]);
@@ -74,13 +94,13 @@ export default function DailyStretchCard() {
             </div>
             <div>
               <h3 className="font-display text-base font-bold text-foreground">
-                Daily Stretching
+                Pre-Workout Stretches
                 {completedToday && (
                   <span className="ml-2 text-xs font-medium text-success">Done ✓</span>
                 )}
               </h3>
               <p className="text-xs text-muted-foreground">
-                {DAILY_STRETCHES.length} stretches · {getTotalStretchTime()}
+                {stretches.length} stretches · {getTotalStretchTime(stretches)}
               </p>
             </div>
           </div>
@@ -101,7 +121,7 @@ export default function DailyStretchCard() {
               className="overflow-hidden"
             >
               <div className="px-4 pb-4 space-y-2">
-                {DAILY_STRETCHES.map((stretch, i) => (
+                {stretches.map((stretch, i) => (
                   <motion.div
                     key={stretch.id}
                     initial={{ opacity: 0, x: -10 }}
@@ -140,7 +160,6 @@ export default function DailyStretchCard() {
                   </motion.div>
                 ))}
 
-                {/* Mark complete button */}
                 {!completedToday ? (
                   <button
                     onClick={markComplete}

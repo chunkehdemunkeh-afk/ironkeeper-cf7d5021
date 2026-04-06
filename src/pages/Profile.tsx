@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import RecoveryTips from "@/components/RecoveryTips";
 import { useQuery } from "@tanstack/react-query";
-import { getUserPreferences, isGKSplit } from "@/lib/user-preferences";
+import { getUserPreferences } from "@/lib/user-preferences";
 import { WORKOUTS } from "@/lib/workout-data";
 
 export default function Profile() {
@@ -22,7 +22,6 @@ export default function Profile() {
   const totalMinutes = history.reduce((s, w) => s + (w.duration || 0), 0);
 
   const prefs = user ? getUserPreferences(user.id) : null;
-  const gkMode = user ? isGKSplit(user.id) : false;
 
   const handleSignOut = async () => {
     await signOut();
@@ -151,8 +150,8 @@ export default function Profile() {
           )}
         </div>
 
-        {/* Recovery tips — GK users see goalkeeper-specific tips, others see general ones */}
-        <RecoveryTips isGK={gkMode} />
+        {/* Recovery / training tips specific to the user's split */}
+        <RecoveryTips splitId={prefs?.splitId} />
 
         {/* Sign out */}
         <motion.button

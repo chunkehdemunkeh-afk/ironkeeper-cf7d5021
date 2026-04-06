@@ -76,8 +76,8 @@ const Index = () => {
         {/* Next session */}
         <NextSessionCard />
 
-        {/* Daily stretching — GK users only */}
-        {gkMode && <DailyStretchCard />}
+        {/* Pre-workout stretches — adapts to the user's next workout */}
+        <DailyStretchCard />
 
       </div>
     </div>
