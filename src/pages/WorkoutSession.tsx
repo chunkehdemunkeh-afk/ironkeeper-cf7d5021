@@ -461,6 +461,8 @@ export default function WorkoutSession() {
     setShowFeedback(true);
   };
 
+  const handleSubmitFeedback = () => {
+    if (!workout) return;
     const hasCompletedAny = completedExercises > 0;
     
     const completed: CompletedWorkout = {
