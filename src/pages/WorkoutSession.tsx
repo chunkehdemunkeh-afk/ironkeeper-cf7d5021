@@ -54,10 +54,12 @@ function SwipeableSetRow({ children, onDelete }: { children: React.ReactNode; on
 }
 
 function ExerciseDragItem({ 
-  exId, isExpanded, allDone, index, name, sets, reps, onToggleExpand, onPlayVideo, onSwap, hasSubs, children 
+  exId, isExpanded, allDone, index, name, sets, reps, onToggleExpand, onPlayVideo, onSwap, hasSubs, lastSub, children 
 }: { 
   exId: string; isExpanded: boolean; allDone: boolean; index: number; name: string; sets: number; reps: string; 
-  onToggleExpand: () => void; onPlayVideo: () => void; onSwap: () => void; hasSubs: boolean; children: React.ReactNode;
+  onToggleExpand: () => void; onPlayVideo: () => void; onSwap: () => void; hasSubs: boolean;
+  lastSub?: { subName: string; subId: string };
+  children: React.ReactNode;
 }) {
   const dragControls = useDragControls();
   return (
@@ -85,6 +87,14 @@ function ExerciseDragItem({
           <div className="flex-1">
             <p className="text-sm font-medium text-foreground">{name}</p>
             <p className="text-xs text-muted-foreground">{sets} × {reps}</p>
+            {lastSub && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <Shuffle className="h-2.5 w-2.5 text-amber-400" />
+                <span className="text-[10px] text-amber-400 font-medium">
+                  Last session: {lastSub.subName}
+                </span>
+              </div>
+            )}
           </div>
         </button>
         <button
@@ -134,7 +144,8 @@ export default function WorkoutSession() {
   const [restTimerActive, setRestTimerActive] = useState(false);
   const [swapExerciseId, setSwapExerciseId] = useState<string | null>(null);
   const [exerciseOverrides, setExerciseOverrides] = useState<Record<string, { name: string; notes?: string; targetMuscle: string; trackWeight?: boolean; repLabel?: string; weightLabel?: string; substituteId?: string }>>({});
-
+  // Substitutions used in the PREVIOUS session for this workout (for visual cue)
+  const [lastSubstitutions, setLastSubstitutions] = useState<Record<string, { subName: string; subId: string }>>({}); 
   // Get the effective exercise ID for data lookups (substitute ID if swapped, otherwise original)
   const getEffectiveExId = useCallback((originalId: string) => {
     return exerciseOverrides[originalId]?.substituteId || originalId;
@@ -255,6 +266,10 @@ export default function WorkoutSession() {
     try {
       const saved = localStorage.getItem(`exercise-notes-${workout.id}`);
       if (saved) setLastExerciseNotes(JSON.parse(saved));
+    } catch {}
+    try {
+      const savedSubs = localStorage.getItem(`exercise-subs-${workout.id}`);
+      if (savedSubs) setLastSubstitutions(JSON.parse(savedSubs));
     } catch {}
     try {
       const suggestions = localStorage.getItem(`weight-up-${workout.id}`);
@@ -445,8 +460,23 @@ export default function WorkoutSession() {
     const notesToSave = Object.fromEntries(
       Object.entries(exerciseNotes).filter(([_, v]) => v.trim())
     );
+    // Always overwrite so stale notes from a previous session are cleared
     if (Object.keys(notesToSave).length > 0) {
       localStorage.setItem(`exercise-notes-${workout.id}`, JSON.stringify(notesToSave));
+    } else {
+      localStorage.removeItem(`exercise-notes-${workout.id}`);
+    }
+    // Save substitute map so next session can show a visual cue
+    const subMap: Record<string, { subName: string; subId: string }> = {};
+    Object.entries(exerciseOverrides).forEach(([origId, override]) => {
+      if (override.substituteId) {
+        subMap[origId] = { subName: override.name, subId: override.substituteId };
+      }
+    });
+    if (Object.keys(subMap).length > 0) {
+      localStorage.setItem(`exercise-subs-${workout.id}`, JSON.stringify(subMap));
+    } else {
+      localStorage.removeItem(`exercise-subs-${workout.id}`);
     }
     if (Object.keys(weightUpSuggestions).length > 0) {
       localStorage.setItem(`weight-up-${workout.id}`, JSON.stringify(weightUpSuggestions));
@@ -792,6 +822,7 @@ export default function WorkoutSession() {
                 onPlayVideo={() => setVideoExercise({ name: displayName, id: ex.id })}
                 onSwap={() => setSwapExerciseId(ex.id)}
                 hasSubs={hasSubs}
+                lastSub={!override ? lastSubstitutions[ex.id] : undefined}
               >
 
                 <AnimatePresence>

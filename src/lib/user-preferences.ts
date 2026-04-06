@@ -42,6 +42,51 @@ export function isGKSplit(userId: string): boolean {
   return getUserPreferences(userId)?.splitId === "gk";
 }
 
+/** Returns the ISO date of the Monday of the week containing dateStr. */
+function getWeekMonday(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  const day = d.getDay(); // 0 = Sun
+  const diff = day === 0 ? 6 : day - 1;
+  d.setDate(d.getDate() - diff);
+  return d.toISOString().split("T")[0];
+}
+
+/**
+ * Calculates the weekly streak: consecutive weeks where the user logged
+ * at least `weekGoal` sessions. Rest days within a week do not break it.
+ * The current in-progress week is counted only if the goal is already met.
+ */
+export function computeWeeklyStreak(allDates: Set<string>, weekGoal: number): number {
+  const sessionsByWeek = new Map<string, number>();
+  allDates.forEach((dateStr) => {
+    const wk = getWeekMonday(dateStr);
+    sessionsByWeek.set(wk, (sessionsByWeek.get(wk) ?? 0) + 1);
+  });
+
+  const now = new Date();
+  const currentWeek = getWeekMonday(now.toISOString().split("T")[0]);
+  let streak = 0;
+
+  for (let w = 0; w < 104; w++) {
+    const checkDate = new Date(now);
+    checkDate.setDate(checkDate.getDate() - w * 7);
+    const wk = getWeekMonday(checkDate.toISOString().split("T")[0]);
+    const sessions = sessionsByWeek.get(wk) ?? 0;
+
+    if (wk === currentWeek) {
+      // Current in-progress week: only count if already hit the target
+      if (sessions >= weekGoal) streak++;
+      continue; // always check prior weeks regardless
+    }
+    if (sessions >= weekGoal) {
+      streak++;
+    } else {
+      break; // missed a past week — streak ends here
+    }
+  }
+
+  return streak;
+}
 
 /**
  * Given the user's schedule and their workout history (most-recent first),

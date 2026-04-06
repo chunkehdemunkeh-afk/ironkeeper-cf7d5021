@@ -1,11 +1,11 @@
 import { useAuth } from "@/hooks/useAuth";
-import { fetchWorkoutHistory } from "@/lib/cloud-data";
+import { fetchWorkoutHistory, fetchActivityLogs } from "@/lib/cloud-data";
 import { Flame, Target, Award, LogOut, Scale, BookOpen, Shield, User, Settings2, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import RecoveryTips from "@/components/RecoveryTips";
 import { useQuery } from "@tanstack/react-query";
-import { getUserPreferences } from "@/lib/user-preferences";
+import { getUserPreferences, computeWeeklyStreak } from "@/lib/user-preferences";
 import { WORKOUTS } from "@/lib/workout-data";
 
 export default function Profile() {
@@ -18,10 +18,23 @@ export default function Profile() {
     enabled: !!user,
   });
 
+  const { data: activities = [] } = useQuery({
+    queryKey: ["activity-logs", user?.id],
+    queryFn: fetchActivityLogs,
+    enabled: !!user,
+  });
+
   const totalWorkouts = history.length;
   const totalMinutes = history.reduce((s, w) => s + (w.duration || 0), 0);
 
   const prefs = user ? getUserPreferences(user.id) : null;
+  const weekGoal = prefs?.daysPerWeek ?? 4;
+
+  // Build the same date set as StatsBar so streak is identical on both screens
+  const allDates = new Set<string>();
+  history.forEach((w) => allDates.add(w.date.split("T")[0]));
+  activities.forEach((a) => allDates.add(a.date));
+  const streak = computeWeeklyStreak(allDates, weekGoal);
 
   const handleSignOut = async () => {
     await signOut();
@@ -59,9 +72,9 @@ export default function Profile() {
         {/* Stats grid */}
         <div className="grid grid-cols-3 gap-2">
           {[
-            { icon: Flame, label: "Streak", value: "—", color: "text-primary" },
+            { icon: Flame, label: "Streak",   value: streak > 0 ? `${streak} week` : "—", color: "text-primary" },
             { icon: Target, label: "Workouts", value: totalWorkouts, color: "text-success" },
-            { icon: Award, label: "Minutes", value: totalMinutes, color: "text-foreground" },
+            { icon: Award,  label: "Minutes",  value: totalMinutes, color: "text-foreground" },
           ].map(({ icon: Icon, label, value, color }) => (
             <div key={label} className="glass-card rounded-xl p-3 text-center">
               <Icon className={`h-4 w-4 mx-auto mb-1 ${color}`} />
