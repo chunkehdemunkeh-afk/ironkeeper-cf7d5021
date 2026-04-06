@@ -202,6 +202,94 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   "sub-grip1b": "https://www.youtube.com/shorts/bfWzFmhB4BA", // Fat Gripz Holds
   "sub-grip2a": "https://www.youtube.com/shorts/dOCQjaasbGs", // Dead Hang
   "sub-grip2b": "https://www.youtube.com/shorts/AGx-t3wqmo8", // Plate Curls
+
+  // ── Full Body workout ─────────────────────────────────────────────────────
+  fb1: "https://www.youtube.com/shorts/PPmvh7gBTi0", // Barbell Back Squat (Jeff Nippard)
+  fb2: "https://www.youtube.com/shorts/5rIqP63yWFg", // Romanian Deadlift (reuse st2)
+  fb3: "https://www.youtube.com/shorts/0cXAp6WhSj4", // Flat Barbell Bench Press (Jeremy Ethier)
+  fb4: "https://www.youtube.com/shorts/oNanBZu0lMk", // Barbell Row
+  fb5: "https://www.youtube.com/shorts/zoN5EH50Dro", // Overhead Press (Jeremy Ethier)
+  fb6: "https://www.youtube.com/shorts/OLePvpxQEGk", // Dumbbell Lateral Raises (reuse pu2)
+
+  // ── 5/3/1 Squat Day ──────────────────────────────────────────────────────
+  sq1: "https://www.youtube.com/shorts/PPmvh7gBTi0", // Barbell Back Squat (Jeff Nippard)
+  sq2: "https://www.youtube.com/shorts/_qv0m3tPd3s", // Front Squat
+  sq3: "https://www.youtube.com/shorts/nDh_BlnLCGc", // Leg Press (reuse sub-lg4b)
+  sq4: "https://www.youtube.com/shorts/Tae3aeJe5Ks", // Leg Extension (reuse lg5)
+  sq5: "https://www.youtube.com/shorts/_lSFEA3uYYo", // Walking Lunges (reuse sub-lg3a)
+  sq6: "https://www.youtube.com/shorts/pasQYajR_eI", // Seated Hamstring Curl (reuse sub-lg1a)
+
+  // ── 5/3/1 Bench Day ──────────────────────────────────────────────────────
+  bn1: "https://www.youtube.com/shorts/0cXAp6WhSj4", // Flat Barbell Bench Press (Jeremy Ethier)
+  bn2: "https://www.youtube.com/shorts/98HWfiRonkE", // Incline Barbell Bench Press (reuse sub-pu1a)
+  bn3: "https://www.youtube.com/shorts/PiJQPOiMua4", // 45° Incline DB Bench (reuse pu1)
+  bn4: "https://www.youtube.com/shorts/dTe9CB9Zous", // Cable Fly (reuse up4)
+  bn5: "https://www.youtube.com/shorts/nVo7WCDSNqQ", // Skull Crushers
+  bn6: "https://www.youtube.com/shorts/aHfbuBf1TJk", // X-Over Cable Tricep Extensions (reuse pu5)
+
+  // ── 5/3/1 Deadlift Day ───────────────────────────────────────────────────
+  dl1: "https://www.youtube.com/shorts/xNwpvDuZJ3k", // Conventional Deadlift (Jeremy Ethier)
+  dl2: "https://www.youtube.com/shorts/ZhHw9HZGezY", // Rack Pull
+  dl3: "https://www.youtube.com/shorts/oNanBZu0lMk", // Barbell Row
+  dl4: "https://www.youtube.com/shorts/z-lxcsIN4T4", // Lat Pull Down - Pronated (reuse pl3)
+  dl5: "https://www.youtube.com/shorts/i9BJwVCK5VQ", // Single Arm Dumbbell Row
+  dl6: "https://www.youtube.com/shorts/i81dMdueu9k", // Face Pulls (reuse rf2)
+
+  // ── 5/3/1 Press Day ──────────────────────────────────────────────────────
+  pr1: "https://www.youtube.com/shorts/zoN5EH50Dro", // Barbell Overhead Press (Jeremy Ethier)
+  pr2: "https://www.youtube.com/shorts/6K_N9AGhItQ", // Arnold Press
+  pr3: "https://www.youtube.com/shorts/OLePvpxQEGk", // Dumbbell Lateral Raises (reuse pu2)
+  pr4: "https://www.youtube.com/shorts/h9xfpTrAvkE", // Dumbbell Front Raises
+  pr5: "https://www.youtube.com/shorts/i81dMdueu9k", // Face Pulls (reuse rf2)
+  pr6: "https://www.youtube.com/shorts/AWsGWt-VMl8", // Upright Row
+
+  // ── Arnold Split — Chest & Back ──────────────────────────────────────────
+  cb1: "https://www.youtube.com/shorts/0cXAp6WhSj4", // Flat Barbell Bench Press (Jeremy Ethier)
+  cb2: "https://www.youtube.com/shorts/oNanBZu0lMk", // Barbell Row
+  cb3: "https://www.youtube.com/shorts/8fXfwG4ftaQ", // Incline Dumbbell Press
+  cb4: "https://www.youtube.com/shorts/z-lxcsIN4T4", // Lat Pull Down - Pronated (reuse pl3)
+  cb5: "https://www.youtube.com/shorts/dTe9CB9Zous", // Cable Fly (reuse up4)
+  cb6: "https://www.youtube.com/shorts/7PE3MlvGAts", // Seated Cable Row - V Bar (reuse pl1)
+
+  // ── Arnold Split — Shoulders & Arms ──────────────────────────────────────
+  sa1: "https://www.youtube.com/shorts/6K_N9AGhItQ", // Arnold Press
+  sa2: "https://www.youtube.com/shorts/OLePvpxQEGk", // Dumbbell Lateral Raises (reuse pu2)
+  sa3: "https://www.youtube.com/shorts/N6paU6TGFWU", // Barbell Curl (Davis Diley)
+  sa4: "https://www.youtube.com/shorts/nVo7WCDSNqQ", // Skull Crushers
+  sa5: "https://www.youtube.com/shorts/NyW2fT2gQhM", // Dumbbell Preacher Hammer Curls (reuse pl6)
+  sa6: "https://www.youtube.com/shorts/aHfbuBf1TJk", // Tricep Push Down - Rope (reuse up8)
+
+  // ── Bro Split — Chest Day ────────────────────────────────────────────────
+  ch1: "https://www.youtube.com/shorts/0cXAp6WhSj4", // Flat Barbell Bench Press (Jeremy Ethier)
+  ch2: "https://www.youtube.com/shorts/98HWfiRonkE", // Incline Barbell Bench Press (reuse sub-pu1a)
+  ch3: "https://www.youtube.com/shorts/PiJQPOiMua4", // 45° Incline DB Bench (reuse pu1)
+  ch4: "https://www.youtube.com/shorts/atcyT99YDeI", // Flat Dumbbell Flies (reuse pu4)
+  ch5: "https://www.youtube.com/shorts/dTe9CB9Zous", // Cable Fly (reuse up4)
+  ch6: "https://www.youtube.com/shorts/ZDOrGNvRdM0", // Weighted Dips
+
+  // ── Bro Split — Back Day ─────────────────────────────────────────────────
+  bk1: "https://www.youtube.com/shorts/xNwpvDuZJ3k", // Conventional Deadlift (Jeremy Ethier)
+  bk2: "https://www.youtube.com/shorts/oNanBZu0lMk", // Barbell Row
+  bk3: "https://www.youtube.com/shorts/z-lxcsIN4T4", // Lat Pull Down - Pronated (reuse pl3)
+  bk4: "https://www.youtube.com/shorts/7PE3MlvGAts", // Seated Cable Row - V Bar (reuse pl1)
+  bk5: "https://www.youtube.com/shorts/i9BJwVCK5VQ", // Single Arm Dumbbell Row
+  bk6: "https://www.youtube.com/shorts/i81dMdueu9k", // Face Pulls (reuse rf2)
+
+  // ── Bro Split — Shoulders Day ─────────────────────────────────────────────
+  sh1: "https://www.youtube.com/shorts/zoN5EH50Dro", // Barbell Overhead Press (Jeremy Ethier)
+  sh2: "https://www.youtube.com/shorts/6K_N9AGhItQ", // Arnold Press
+  sh3: "https://www.youtube.com/shorts/OLePvpxQEGk", // Dumbbell Lateral Raises (reuse pu2)
+  sh4: "https://www.youtube.com/shorts/h9xfpTrAvkE", // Dumbbell Front Raises
+  sh5: "https://www.youtube.com/shorts/c44hwGS-peY", // Single Arm Cross Body Reverse Fly (reuse pl4)
+  sh6: "https://www.youtube.com/shorts/MlqHEfydPpE", // Barbell Shrugs
+
+  // ── Bro Split — Arms Day ─────────────────────────────────────────────────
+  am1: "https://www.youtube.com/shorts/N6paU6TGFWU", // Barbell Curl (Davis Diley)
+  am2: "https://www.youtube.com/shorts/nVo7WCDSNqQ", // Skull Crushers
+  am3: "https://www.youtube.com/shorts/XhIsIcjIbCw", // Incline Dumbbell Curl
+  am4: "https://www.youtube.com/shorts/4yKLxOsrGfg", // Close-Grip Bench Press
+  am5: "https://www.youtube.com/shorts/NyW2fT2gQhM", // Dumbbell Preacher Hammer Curls (reuse pl6)
+  am6: "https://www.youtube.com/shorts/aHfbuBf1TJk", // Tricep Push Down - Rope (reuse up8)
 };
 
 // Get YouTube Short URL for an exercise, with fallback to search
