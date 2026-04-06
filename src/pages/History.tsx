@@ -290,6 +290,7 @@ export default function History() {
                     icon={workoutIcons[w.workoutId] || Dumbbell}
                     onDelete={handleDelete}
                     isDeleting={deletingId === w.id}
+                    defaultExpanded={true}
                   />
                 ))
               )}

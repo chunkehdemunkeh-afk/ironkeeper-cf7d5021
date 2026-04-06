@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { WORKOUTS, type CompletedWorkout } from "@/lib/workout-data";
-import { Clock, Trash2, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { Clock, Check, Trash2, ChevronDown, ChevronUp, AlertTriangle, Star, MessageSquare, Dumbbell, Trophy } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,101 +20,212 @@ interface WorkoutCardProps {
   icon: LucideIcon;
   onDelete: (id: string) => void;
   isDeleting: boolean;
+  defaultExpanded?: boolean;
 }
 
-export default function WorkoutCard({ workout: w, icon: Icon, onDelete, isDeleting }: WorkoutCardProps) {
-  const [expanded, setExpanded] = useState(false);
+export default function WorkoutCard({ workout: w, icon: Icon, onDelete, isDeleting, defaultExpanded = false }: WorkoutCardProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
   const allExercises = WORKOUTS.flatMap((wk) => wk.exercises);
   const getExerciseMeta = (id: string) => allExercises.find((e) => e.id === id);
 
-  // Group sets by exercise
-  const groupedSets = Object.entries(
-    w.sets.reduce<Record<string, { exerciseId: string; reps: number; weight: number }[]>>((acc, s) => {
-      const ex = getExerciseMeta(s.exerciseId);
-      const name = ex?.name || s.exerciseId;
-      if (!acc[name]) acc[name] = [];
-      acc[name].push(s);
-      return acc;
-    }, {})
-  );
+  // Group sets by exercise, preserving order
+  const groupedSets: [string, { exerciseId: string; reps: number; weight: number; name: string }[]][] = [];
+  const seen = new Set<string>();
+  for (const s of w.sets) {
+    const ex = getExerciseMeta(s.exerciseId);
+    const name = ex?.name || s.exerciseId;
+    if (!seen.has(name)) {
+      seen.add(name);
+      groupedSets.push([name, []]);
+    }
+    groupedSets.find(([n]) => n === name)![1].push({ ...s, name });
+  }
 
-  const formatSet = (s: { exerciseId: string; reps: number; weight: number }) => {
+  const getSetLabel = (s: { exerciseId: string; reps: number; weight: number }) => {
     const ex = getExerciseMeta(s.exerciseId);
     const isTimeBased = ex?.repLabel === "Sec";
-    if (isTimeBased) return `${s.reps}s`;
+    if (isTimeBased) return { primary: `${s.reps}s`, secondary: "" };
     const showWeight = ex?.trackWeight !== false;
-    if (showWeight && s.weight > 0) return `${s.weight}kg × ${s.reps}`;
-    return `${s.reps} ${(ex?.repLabel || "reps").toLowerCase()}`;
+    const repLabel = ex?.repLabel || "reps";
+    const weightLabel = ex?.weightLabel || "kg";
+    if (showWeight && s.weight > 0) return { primary: `${s.weight}${weightLabel}`, secondary: `${s.reps} ${repLabel}` };
+    return { primary: `${s.reps}`, secondary: repLabel.toLowerCase() };
   };
+
+  const totalVolume = w.sets
+    .filter((s) => getExerciseMeta(s.exerciseId)?.trackWeight !== false)
+    .reduce((sum, s) => sum + s.weight * s.reps, 0);
+
+  const effortLabels = ["", "Easy", "Light", "Moderate", "Hard", "Max effort"];
 
   return (
     <motion.div
       layout
       className={`glass-card rounded-2xl overflow-hidden transition-all ${isDeleting ? "opacity-50 pointer-events-none" : ""}`}
     >
-      {/* Header */}
+      {/* ── Header banner ── */}
       <div
-        className="flex items-center gap-3 p-4 cursor-pointer"
-        onClick={() => w.sets.length > 0 && setExpanded(!expanded)}
+        className="p-4 cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0">
-          <Icon className="h-5 w-5 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground">{w.workoutName}</p>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" /> {w.duration}m
-            </span>
-            <span className="text-muted-foreground/40">·</span>
-            <span>{w.exercisesCompleted}/{w.totalExercises} exercises</span>
+        {/* Top row: icon + name + chevron */}
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0">
+            <Icon className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">{w.workoutName}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {new Date(w.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+            </p>
+          </div>
+          <div className="p-1.5 rounded-lg text-muted-foreground">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          {w.sets.length > 0 && (
-            <div className="p-1.5 rounded-lg text-muted-foreground">
-              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+
+        {/* Stats row */}
+        <div className="flex gap-3 mt-3">
+          <div className="flex-1 flex items-center gap-1.5 rounded-lg bg-muted/40 px-2.5 py-1.5">
+            <Clock className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-semibold text-foreground">{w.duration}m</span>
+          </div>
+          <div className="flex-1 flex items-center gap-1.5 rounded-lg bg-muted/40 px-2.5 py-1.5">
+            <Check className="h-3.5 w-3.5 text-success" />
+            <span className="text-xs font-semibold text-foreground">{w.exercisesCompleted}/{w.totalExercises} ex</span>
+          </div>
+          {totalVolume > 0 && (
+            <div className="flex-1 flex items-center gap-1.5 rounded-lg bg-muted/40 px-2.5 py-1.5">
+              <Dumbbell className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-semibold text-foreground">{(totalVolume / 1000).toFixed(1)}t</span>
+            </div>
+          )}
+          {w.effortRating && (
+            <div className="flex-1 flex items-center gap-1 rounded-lg bg-muted/40 px-2.5 py-1.5">
+              {Array.from({ length: w.effortRating }).map((_, i) => (
+                <Star key={i} className="h-2.5 w-2.5 text-primary fill-primary" />
+              ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* Expanded sets */}
+      {/* ── Expanded exercise breakdown ── */}
       <AnimatePresence>
-        {expanded && groupedSets.length > 0 && (
+        {expanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.22 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-3 space-y-2">
+            <div className="px-3 pb-3 space-y-2">
               <div className="h-px bg-border/50" />
-              {groupedSets.map(([name, sets]) => (
-                <div key={name} className="flex items-start justify-between gap-3 py-1">
-                  <span className="text-xs text-muted-foreground flex-shrink-0 pt-0.5">{name}</span>
-                  <div className="flex flex-wrap justify-end gap-1">
-                    {sets.map((s, si) => (
-                      <span
-                        key={si}
-                        className="text-[11px] font-medium text-foreground bg-muted/50 rounded-md px-1.5 py-0.5"
-                      >
-                        {formatSet(s)}
+
+              {groupedSets.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-2">No set data recorded</p>
+              ) : (
+                groupedSets.map(([name, sets], exIdx) => (
+                  <div key={name} className="glass-card rounded-xl overflow-hidden">
+                    {/* Exercise header */}
+                    <div className="flex items-center gap-2.5 px-3 py-2.5">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-success/20 text-success text-[10px] font-bold flex-shrink-0">
+                        <Check className="h-3 w-3" />
                       </span>
-                    ))}
+                      <p className="text-sm font-medium text-foreground flex-1">{name}</p>
+                      <span className="text-[10px] text-muted-foreground bg-muted/50 rounded-md px-1.5 py-0.5">
+                        {sets.length} {sets.length === 1 ? "set" : "sets"}
+                      </span>
+                    </div>
+
+                    {/* Column headers */}
+                    <div className="grid grid-cols-[28px_1fr_1fr_36px] gap-x-1.5 items-center px-3 pb-1 text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                      <span className="text-center">Set</span>
+                      <span className="text-center">
+                        {getExerciseMeta(sets[0].exerciseId)?.weightLabel || "Kg"}
+                      </span>
+                      <span className="text-center">
+                        {getExerciseMeta(sets[0].exerciseId)?.repLabel === "Sec" ? "Time" : getExerciseMeta(sets[0].exerciseId)?.repLabel || "Reps"}
+                      </span>
+                      <span className="text-center">✓</span>
+                    </div>
+
+                    {/* Set rows */}
+                    <div className="px-3 pb-2.5 space-y-1">
+                      {sets.map((s, si) => {
+                        const label = getSetLabel(s);
+                        const ex = getExerciseMeta(s.exerciseId);
+                        const isTimeBased = ex?.repLabel === "Sec";
+                        const showWeight = ex?.trackWeight !== false;
+                        return (
+                          <div
+                            key={si}
+                            className="grid grid-cols-[28px_1fr_1fr_36px] gap-x-1.5 items-center"
+                          >
+                            <span className="text-xs font-medium text-center text-success">{si + 1}</span>
+                            {isTimeBased ? (
+                              <>
+                                <div className="col-span-2 h-9 rounded-lg bg-success/15 border border-success/40 flex items-center justify-center">
+                                  <span className="text-sm font-semibold text-success">{s.reps}s</span>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className={`h-9 rounded-lg flex items-center justify-center ${showWeight && s.weight > 0 ? "bg-success/15 border border-success/40" : "bg-muted/40 border border-border/50"}`}>
+                                  <span className={`text-sm font-semibold ${showWeight && s.weight > 0 ? "text-success" : "text-muted-foreground"}`}>
+                                    {showWeight ? (s.weight || "—") : "—"}
+                                  </span>
+                                </div>
+                                <div className="h-9 rounded-lg bg-success/15 border border-success/40 flex items-center justify-center">
+                                  <span className="text-sm font-semibold text-success">{s.reps}</span>
+                                </div>
+                              </>
+                            )}
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground">
+                              <Check className="h-3.5 w-3.5" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {/* Session notes */}
+              {w.sessionNotes && (
+                <div className="glass-card rounded-xl p-3 flex gap-2">
+                  <MessageSquare className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-0.5">Session Note</p>
+                    <p className="text-xs text-foreground">{w.sessionNotes}</p>
                   </div>
                 </div>
-              ))}
+              )}
 
-              {/* Delete button */}
-              <div className="h-px bg-border/50 mt-1" />
+              {/* Effort rating */}
+              {w.effortRating && (
+                <div className="glass-card rounded-xl p-3 flex items-center gap-3">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${i < w.effortRating! ? "text-primary fill-primary" : "text-muted-foreground/30"}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{effortLabels[w.effortRating]}</span>
+                </div>
+              )}
+
+              {/* Delete */}
               <div className="flex justify-end pt-1">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-lg hover:bg-destructive/10">
-                      <Trash2 className="h-3 w-3" /> Delete
+                      <Trash2 className="h-3 w-3" /> Delete session
                     </button>
                   </AlertDialogTrigger>
                   <AlertDialogContent className="max-w-sm rounded-2xl">
@@ -124,7 +235,7 @@ export default function WorkoutCard({ workout: w, icon: Icon, onDelete, isDeleti
                       </div>
                       <AlertDialogTitle>Delete workout session?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will permanently delete your <span className="font-medium text-foreground">{w.workoutName}</span> session and all its set data. This action cannot be undone.
+                        This will permanently delete your <span className="font-medium text-foreground">{w.workoutName}</span> session and all its set data. This cannot be undone.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
