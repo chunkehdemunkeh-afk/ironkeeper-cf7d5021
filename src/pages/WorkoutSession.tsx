@@ -795,19 +795,8 @@ export default function WorkoutSession() {
             <option value={180}>3m</option>
           </select>
         </div>
-          <select
-            value={restDuration}
-            onChange={(e) => setRestDuration(Number(e.target.value))}
-            className="text-[10px] bg-card border border-border/50 rounded-full px-2 py-1 text-muted-foreground outline-none"
-          >
-            <option value={45}>45s</option>
-            <option value={60}>60s</option>
-            <option value={75}>75s</option>
-            <option value={90}>90s</option>
-            <option value={120}>2m</option>
-            <option value={180}>3m</option>
-          </select>
-        </div>
+
+
 
         {/* Progress bar */}
         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
