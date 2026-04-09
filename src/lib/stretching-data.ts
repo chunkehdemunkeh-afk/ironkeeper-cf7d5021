@@ -40,6 +40,9 @@ const LIB: Record<string, Stretch> = {
 
 // ── Workout ID → ordered stretch list ────────────────────────────────────────
 const MAP: Record<string, Array<keyof typeof LIB>> = {
+  // Daily full-body + GK mix
+  daily_gk: ["hip_flexor", "hamstring", "quad", "butterfly", "ankle_circle", "pigeon", "cat_cow", "shoulder_cb", "doorway_chest", "calf_wall"],
+
   // GK workouts
   power:    ["hip_flexor", "quad", "hamstring", "butterfly", "ankle_circle", "pigeon"],
   agility:  ["hip_flexor", "butterfly", "ankle_circle", "quad", "it_band", "calf_wall"],
