@@ -22,18 +22,20 @@ export default function DailyStretchCard() {
 
   // Same query key as NextSessionCard — React Query deduplicates the fetch
   const prefs = user ? getUserPreferences(user.id) : null;
+  const gkMode = user ? isGKSplit(user.id) : false;
   const { data: history = [] } = useQuery({
     queryKey: ["workout-history", user?.id],
     queryFn: fetchWorkoutHistory,
     enabled: !!user,
   });
 
-  // Determine next workout to pick relevant stretches
+  // GK users get a fixed daily routine; gym users get workout-specific stretches
   const nextWorkoutId = useMemo(() => {
+    if (gkMode) return "daily_gk";
     if (!prefs?.schedule?.length) return "fullbody";
     const recent = history.map((h) => h.workoutId);
     return getNextSplitDay(prefs.schedule, recent).next.workoutId;
-  }, [prefs, history]);
+  }, [prefs, history, gkMode]);
 
   const stretches = useMemo(() => getStretchesForWorkout(nextWorkoutId), [nextWorkoutId]);
 
@@ -94,7 +96,7 @@ export default function DailyStretchCard() {
             </div>
             <div>
               <h3 className="font-display text-base font-bold text-foreground">
-                Pre-Workout Stretches
+                {gkMode ? "Daily Stretches" : "Pre-Workout Stretches"}
                 {completedToday && (
                   <span className="ml-2 text-xs font-medium text-success">Done ✓</span>
                 )}
