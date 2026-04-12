@@ -27,7 +27,8 @@ export default function TDEESetup({ onComplete }: Props) {
   const [step, setStep] = useState(0);
   const [gender, setGender] = useState<Gender>("male");
   const [age, setAge] = useState("");
-  const [heightCm, setHeightCm] = useState("");
+  const [heightFt, setHeightFt] = useState("");
+  const [heightIn, setHeightIn] = useState("");
   const [weightKg, setWeightKg] = useState("");
   const [activity, setActivity] = useState<ActivityLevel>("moderate");
   const [goal, setGoal] = useState<GoalType>("maintain");
@@ -37,7 +38,7 @@ export default function TDEESetup({ onComplete }: Props) {
 
   const canNext =
     step === 0 ? age !== "" :
-    step === 1 ? heightCm !== "" && weightKg !== "" :
+    step === 1 ? heightFt !== "" && weightKg !== "" :
     true;
 
   const isLastStep = step === totalSteps - 1;
@@ -45,7 +46,8 @@ export default function TDEESetup({ onComplete }: Props) {
   const handleFinish = async () => {
     if (!user) return;
     setSaving(true);
-    const result = calculateTDEE(gender, +age, +heightCm, +weightKg, activity, goal);
+    const heightCm = Math.round((+heightFt * 12 + (+heightIn || 0)) * 2.54);
+    const result = calculateTDEE(gender, +age, heightCm, +weightKg, activity, goal);
     const { error } = await supabase.from("nutrition_goals").upsert({
       user_id: user.id,
       calories: result.targetCalories,
@@ -53,7 +55,7 @@ export default function TDEESetup({ onComplete }: Props) {
       carbs_g: result.carbsG,
       fat_g: result.fatG,
       tdee_age: +age,
-      tdee_height_cm: +heightCm,
+      tdee_height_cm: heightCm,
       tdee_weight_kg: +weightKg,
       tdee_activity_level: activity,
       tdee_goal: goal,
@@ -69,7 +71,7 @@ export default function TDEESetup({ onComplete }: Props) {
   };
 
   const preview = canNext && isLastStep
-    ? calculateTDEE(gender, +age || 25, +heightCm || 175, +weightKg || 75, activity, goal)
+    ? calculateTDEE(gender, +age || 25, Math.round((+heightFt * 12 + (+heightIn || 0)) * 2.54) || 175, +weightKg || 75, activity, goal)
     : null;
 
   const goBack = () => {
@@ -173,15 +175,30 @@ export default function TDEESetup({ onComplete }: Props) {
 
               <div className="mt-8 space-y-6">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Height (cm)</p>
-                  <Input
-                    type="number"
-                    value={heightCm}
-                    onChange={(e) => setHeightCm(e.target.value)}
-                    placeholder="175"
-                    className="text-lg h-14 rounded-xl bg-card border-border/50 focus:border-primary/50"
-                    autoFocus
-                  />
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Height</p>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <Input
+                        type="number"
+                        value={heightFt}
+                        onChange={(e) => setHeightFt(e.target.value)}
+                        placeholder="5"
+                        className="text-lg h-14 rounded-xl bg-card border-border/50 focus:border-primary/50"
+                        autoFocus
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1 text-center">feet</p>
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        type="number"
+                        value={heightIn}
+                        onChange={(e) => setHeightIn(e.target.value)}
+                        placeholder="10"
+                        className="text-lg h-14 rounded-xl bg-card border-border/50 focus:border-primary/50"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1 text-center">inches</p>
+                    </div>
+                  </div>
                 </div>
 
                 <div>
