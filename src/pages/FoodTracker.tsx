@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import FoodSearch from "@/components/food/FoodSearch";
 import TDEESetup from "@/components/food/TDEESetup";
+import NutritionSettings from "@/components/food/NutritionSettings";
 import WaterIntake from "@/components/food/WaterIntake";
 import { toast } from "sonner";
 
