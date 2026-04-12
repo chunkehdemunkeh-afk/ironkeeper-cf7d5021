@@ -48,6 +48,7 @@ export default function FoodTracker() {
   const [goals, setGoals] = useState<Goals | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSetup, setShowSetup] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [searchMeal, setSearchMeal] = useState<MealType | null>(null);
 
   const fetchData = useCallback(async () => {
