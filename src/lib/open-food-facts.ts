@@ -56,3 +56,13 @@ export async function searchFoods(query: string, page = 1): Promise<FoodItem[]> 
     .map(parseProduct)
     .filter((p): p is FoodItem => p !== null && p.calories > 0);
 }
+
+export async function lookupBarcode(barcode: string): Promise<FoodItem | null> {
+  if (!barcode.trim()) return null;
+  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=code,product_name,brands,serving_size,nutriments,image_front_small_url`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data.status !== 1 || !data.product) return null;
+  return parseProduct(data.product as OFFProduct);
+}
