@@ -329,6 +329,46 @@ export default function WorkoutSession() {
     }
   }, [workout, lastSessionData]);
 
+  // Check if an exercise belongs to an accessory routine
+  const getAccessoryForExercise = useCallback((exerciseId: string): string | null => {
+    for (const accId of addedAccessories) {
+      const routine = ACCESSORY_ROUTINES.find(r => r.id === accId);
+      if (routine?.exercises.some(e => e.id === exerciseId)) return accId;
+    }
+    return null;
+  }, [addedAccessories]);
+
+  const removeExercise = useCallback((exerciseId: string) => {
+    // Check if it's part of an accessory routine — remove the whole routine
+    const accId = getAccessoryForExercise(exerciseId);
+    if (accId) {
+      const routine = ACCESSORY_ROUTINES.find(r => r.id === accId);
+      if (routine) {
+        const exIds = routine.exercises.map(e => e.id);
+        setAddedAccessories(prev => prev.filter(id => id !== accId));
+        setExerciseOrder(prev => prev.filter(id => !exIds.includes(id)));
+        setSetLogs(prev => {
+          const next = { ...prev };
+          exIds.forEach(id => delete next[id]);
+          return next;
+        });
+        hapticMedium();
+        toast.success(`Removed ${routine.name} accessory`);
+        return;
+      }
+    }
+    // For regular exercises, remove just that one
+    setExerciseOrder(prev => prev.filter(id => id !== exerciseId));
+    setSetLogs(prev => {
+      const next = { ...prev };
+      delete next[exerciseId];
+      return next;
+    });
+    if (expandedExercise === exerciseId) setExpandedExercise(null);
+    hapticMedium();
+    toast.success("Exercise removed");
+  }, [getAccessoryForExercise, expandedExercise]);
+
   const addAccessory = useCallback((accId: string) => {
     const routine = ACCESSORY_ROUTINES.find(r => r.id === accId);
     if (!routine || addedAccessories.includes(accId)) return;
