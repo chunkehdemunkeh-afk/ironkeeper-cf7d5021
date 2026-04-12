@@ -5,6 +5,7 @@ import WeekStrip from "@/components/WeekStrip";
 import NextSessionCard from "@/components/NextSessionCard";
 import StatsBar from "@/components/StatsBar";
 import DailyStretchCard from "@/components/DailyStretchCard";
+import HomeDailySummary from "@/components/HomeDailySummary";
 import { isGKSplit } from "@/lib/user-preferences";
 
 import { motion } from "framer-motion";
@@ -75,6 +76,9 @@ const Index = () => {
 
         {/* Next session */}
         <NextSessionCard />
+
+        {/* Daily nutrition & water summary */}
+        <HomeDailySummary />
 
         {/* Pre-workout stretches — adapts to the user's next workout */}
         <DailyStretchCard />

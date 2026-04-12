@@ -3,8 +3,8 @@ import { Flame, Target, Timer } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { getUserPreferences, computeWeeklyStreak } from "@/lib/user-preferences";
-
+import { getUserPreferences } from "@/lib/user-preferences";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function StatsBar() {
   const { user } = useAuth();
@@ -20,6 +20,31 @@ export default function StatsBar() {
   const { data: activities = [] } = useQuery({
     queryKey: ["activity-logs", user?.id],
     queryFn: fetchActivityLogs,
+    enabled: !!user,
+  });
+
+  // Fetch food log dates & water intake dates for streak
+  const { data: foodDates = new Set<string>() } = useQuery({
+    queryKey: ["food-log-dates", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("food_logs")
+        .select("date")
+        .eq("user_id", user!.id);
+      return new Set((data || []).map((d: any) => d.date));
+    },
+    enabled: !!user,
+  });
+
+  const { data: waterDates = new Set<string>() } = useQuery({
+    queryKey: ["water-intake-dates", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("water_intake")
+        .select("date")
+        .eq("user_id", user!.id);
+      return new Set((data || []).map((d: any) => d.date));
+    },
     enabled: !!user,
   });
 
@@ -40,13 +65,38 @@ export default function StatsBar() {
   });
   const thisWeek = weekDays.size;
 
-  // ── All training dates (for streak calc) ──────────────────────────────────
-  const allDates = new Set<string>();
-  history.forEach((w) => allDates.add(w.date.split("T")[0]));
-  activities.forEach((a) => allDates.add(a.date));
+  // ── Daily streak: days where user logged exercise + nutrition + water ─────
+  const exerciseDates = new Set<string>();
+  history.forEach((w) => exerciseDates.add(w.date.split("T")[0]));
+  activities.forEach((a) => exerciseDates.add(a.date));
 
-  // ── Weekly streak ───────────────────────────────────────────────────
-  const streak = computeWeeklyStreak(allDates, weekGoal);
+  const computeDailyStreak = (): number => {
+    let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const ds = d.toISOString().split("T")[0];
+
+      const hasExercise = exerciseDates.has(ds);
+      const hasFood = foodDates.has(ds);
+      const hasWater = waterDates.has(ds);
+
+      if (hasExercise && hasFood && hasWater) {
+        streak++;
+      } else if (i === 0) {
+        // Today hasn't been completed yet — check yesterday
+        continue;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  };
+
+  const streak = computeDailyStreak();
 
   // ── Total training time ───────────────────────────────────────────────────
   const totalMinutes =
@@ -56,7 +106,7 @@ export default function StatsBar() {
   const items = [
     {
       icon: Flame,
-      value: streak > 0 ? `${streak} week` : "—",
+      value: streak > 0 ? `${streak} day${streak !== 1 ? "s" : ""}` : "—",
       label: "Streak",
       color: streak > 0 ? "text-primary" : "text-muted-foreground",
     },

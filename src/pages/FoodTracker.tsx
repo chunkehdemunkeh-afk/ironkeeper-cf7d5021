@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import FoodSearch from "@/components/food/FoodSearch";
 import TDEESetup from "@/components/food/TDEESetup";
+import WaterIntake from "@/components/food/WaterIntake";
 import { toast } from "sonner";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
@@ -202,6 +203,11 @@ export default function FoodTracker() {
           </div>
         </motion.div>
       )}
+
+      {/* Water intake */}
+      <div className="mt-4">
+        <WaterIntake date={date} />
+      </div>
 
       {/* Meals */}
       {loading ? (
