@@ -189,7 +189,7 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
 
   // Accessory — Abs
   "acc-abs1": "https://www.youtube.com/shorts/AV5PmrSBbUY", // Cable Crunches
-  "acc-abs2": "https://www.youtube.com/shorts/7R5IJUbEKs0", // Russian Twists
+  "acc-abs2": "https://www.youtube.com/shorts/wrBx6WHIAmU", // Oblique Leg Raises
   "sub-abs1a": "https://www.youtube.com/shorts/bP4PGEkuaYc", // Hanging Knee Raises
   "sub-abs1b": "https://www.youtube.com/shorts/rqiTPl09RoE", // Ab Wheel Rollouts
   "sub-abs2a": "https://www.youtube.com/shorts/9FGilxCbdz8", // Bicycle Crunches

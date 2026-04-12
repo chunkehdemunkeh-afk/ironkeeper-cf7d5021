@@ -16,7 +16,7 @@ export const ACCESSORY_ROUTINES: AccessoryRoutine[] = [
     emoji: "🔥",
     exercises: [
       { id: "acc-abs1", name: "Cable Crunches", sets: 3, reps: "12-15", targetMuscle: "Abs", notes: "Focus on curling the torso, not pulling with arms" },
-      { id: "acc-abs2", name: "Russian Twists", sets: 3, reps: "12-15 each", targetMuscle: "Obliques", notes: "Control the rotation, tap the floor each side" },
+      { id: "acc-abs2", name: "Oblique Leg Raises", sets: 3, reps: "12-15 each", targetMuscle: "Obliques", notes: "Lie on side, raise legs together using obliques, controlled lowering" },
     ],
   },
   {
@@ -46,7 +46,7 @@ export const ACCESSORY_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
     { id: "sub-abs1a", name: "Hanging Knee Raises", targetMuscle: "Abs", notes: "Controlled raise, no swinging, pause at top", trackWeight: false, repLabel: "Reps", description: "Hanging ab exercise targeting lower abs" },
     { id: "sub-abs1b", name: "Ab Wheel Rollouts", targetMuscle: "Abs", notes: "Full extension, squeeze back to start, keep hips tucked", trackWeight: false, repLabel: "Reps", description: "Progressive core stability and strength" },
   ],
-  // Russian Twists
+  // Oblique Leg Raises
   "acc-abs2": [
     { id: "sub-abs2a", name: "Bicycle Crunches", targetMuscle: "Obliques", notes: "Opposite elbow to knee, slow and controlled", trackWeight: false, repLabel: "Reps", description: "Dynamic rotational crunch for obliques" },
     { id: "sub-abs2b", name: "Woodchoppers (Cable)", targetMuscle: "Obliques", notes: "High-to-low or low-to-high, rotate through the core", description: "Cable rotation for oblique power" },

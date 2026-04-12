@@ -72,7 +72,7 @@ export const EXERCISE_LIBRARY: LibraryExercise[] = [
   { id: "lib-37", name: "Dead Bug", muscleGroup: "Core", equipment: "Bodyweight", description: "On back, extend opposite arm and leg." },
   { id: "lib-38", name: "Hanging Leg Raise", muscleGroup: "Core", equipment: "Pull-up Bar", description: "Hang, raise legs to parallel or above." },
   { id: "lib-39", name: "Ab Wheel Rollout", muscleGroup: "Core", equipment: "Ab Wheel", description: "Roll out and return with core control." },
-  { id: "lib-40", name: "Russian Twist", muscleGroup: "Core", equipment: "Bodyweight", description: "Sit, lean back, rotate torso side to side." },
+  { id: "lib-40", name: "Oblique Leg Raise", muscleGroup: "Core", equipment: "Bodyweight", description: "Lie on side, raise legs together using obliques." },
   { id: "lib-41", name: "Copenhagen Adductor", muscleGroup: "Core", equipment: "Bodyweight", description: "Side plank with top leg on bench, lift bottom leg." },
 
   // Forearms
