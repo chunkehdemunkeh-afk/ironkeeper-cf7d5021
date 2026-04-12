@@ -883,6 +883,7 @@ export default function WorkoutSession() {
                 onSwap={() => setSwapExerciseId(ex.id)}
                 hasSubs={hasSubs}
                 lastSub={!override ? lastSubstitutions[ex.id] : undefined}
+                onDelete={() => removeExercise(ex.id)}
               >
 
                 <AnimatePresence>
