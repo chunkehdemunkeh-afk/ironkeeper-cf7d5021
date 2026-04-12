@@ -54,11 +54,12 @@ function SwipeableSetRow({ children, onDelete }: { children: React.ReactNode; on
 }
 
 function ExerciseDragItem({ 
-  exId, isExpanded, allDone, index, name, sets, reps, onToggleExpand, onPlayVideo, onSwap, hasSubs, lastSub, children 
+  exId, isExpanded, allDone, index, name, sets, reps, onToggleExpand, onPlayVideo, onSwap, hasSubs, lastSub, onDelete, children 
 }: { 
   exId: string; isExpanded: boolean; allDone: boolean; index: number; name: string; sets: number; reps: string; 
   onToggleExpand: () => void; onPlayVideo: () => void; onSwap: () => void; hasSubs: boolean;
   lastSub?: { subName: string; subId: string };
+  onDelete?: () => void;
   children: React.ReactNode;
 }) {
   const dragControls = useDragControls();
