@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Loader2, X } from "lucide-react";
+import { Search, Plus, Loader2, X, Clock, RotateCcw } from "lucide-react";
 import { searchFoods, FoodItem } from "@/lib/open-food-facts";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+
+interface RecentFood {
+  food_name: string;
+  brand: string | null;
+  serving_size: string | null;
+  serving_qty: number;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  barcode: string | null;
+}
 
 interface Props {
   open: boolean;
@@ -27,6 +39,34 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
   const [selected, setSelected] = useState<FoodItem | null>(null);
   const [servings, setServings] = useState("1");
   const [saving, setSaving] = useState(false);
+  const [recents, setRecents] = useState<RecentFood[]>([]);
+  const [quickAdding, setQuickAdding] = useState<string | null>(null);
+
+  // Fetch recent unique foods on open
+  useEffect(() => {
+    if (!open || !user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("food_logs")
+        .select("food_name, brand, serving_size, serving_qty, calories, protein_g, carbs_g, fat_g, barcode, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (!data) return;
+      // Deduplicate by food_name, keep most recent
+      const seen = new Set<string>();
+      const unique: RecentFood[] = [];
+      for (const row of data) {
+        const key = row.food_name.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(row as RecentFood);
+        }
+        if (unique.length >= 10) break;
+      }
+      setRecents(unique);
+    })();
+  }, [open, user]);
 
   const doSearch = useCallback(async () => {
     if (!query.trim()) return;
@@ -66,6 +106,35 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
     onLogged();
     onClose();
   };
+
+  const quickAdd = async (food: RecentFood) => {
+    if (!user) return;
+    setQuickAdding(food.food_name);
+    const { error } = await supabase.from("food_logs").insert({
+      user_id: user.id,
+      date,
+      meal_type: mealType,
+      food_name: food.food_name,
+      brand: food.brand,
+      serving_size: food.serving_size,
+      serving_qty: food.serving_qty,
+      calories: food.calories,
+      protein_g: food.protein_g,
+      carbs_g: food.carbs_g,
+      fat_g: food.fat_g,
+      barcode: food.barcode,
+    });
+    setQuickAdding(null);
+    if (error) {
+      toast.error("Failed to log food");
+      return;
+    }
+    toast.success(`${food.food_name} logged to ${mealType}`);
+    onLogged();
+    onClose();
+  };
+
+  const showRecents = !selected && results.length === 0 && !query && recents.length > 0;
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -159,8 +228,44 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
               </Button>
             </div>
           ) : (
-            /* Results list */
             <div className="flex-1 overflow-y-auto px-4 space-y-2 pb-4">
+              {/* Recent foods */}
+              {showRecents && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">Recent Foods</span>
+                  </div>
+                  {recents.map((food, i) => (
+                    <button
+                      key={`recent-${i}`}
+                      onClick={() => quickAdd(food)}
+                      disabled={quickAdding === food.food_name}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors text-left disabled:opacity-50"
+                    >
+                      <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                        <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{food.food_name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {food.serving_qty}× {food.serving_size || "100g"} · {Math.round(food.protein_g)}p · {Math.round(food.carbs_g)}c · {Math.round(food.fat_g)}f
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-bold text-primary">{Math.round(food.calories)}</div>
+                        <div className="text-[10px] text-muted-foreground">kcal</div>
+                      </div>
+                    </button>
+                  ))}
+                  <div className="border-t border-border my-3" />
+                  <p className="text-center text-xs text-muted-foreground">
+                    Or search for new foods above
+                  </p>
+                </div>
+              )}
+
+              {/* Search results */}
               {results.length === 0 && !searching && query && (
                 <p className="text-center text-muted-foreground text-sm py-8">
                   No results found. Try a different search.
