@@ -1,44 +1,67 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encode as hexEncode } from "https://deno.land/std@0.168.0/encoding/hex.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-let cachedToken: { token: string; expiresAt: number } | null = null;
+// OAuth 1.0 HMAC-SHA1 signing (no IP whitelisting required)
+function percentEncode(str: string): string {
+  return encodeURIComponent(str).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+}
 
-async function getAccessToken(): Promise<string> {
-  if (cachedToken && Date.now() < cachedToken.expiresAt) {
-    return cachedToken.token;
-  }
+async function hmacSha1(key: string, data: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(key),
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(data));
+  return btoa(String.fromCharCode(...new Uint8Array(sig)));
+}
 
-  const clientId = Deno.env.get("FATSECRET_CONSUMER_KEY");
-  const clientSecret = Deno.env.get("FATSECRET_CONSUMER_SECRET");
+function generateNonce(): string {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+}
 
-  if (!clientId || !clientSecret) {
-    throw new Error("FatSecret credentials not configured");
-  }
+async function buildOAuthUrl(baseUrl: string, params: Record<string, string>): Promise<string> {
+  const consumerKey = Deno.env.get("FATSECRET_CONSUMER_KEY");
+  const consumerSecret = Deno.env.get("FATSECRET_CONSUMER_SECRET");
+  if (!consumerKey || !consumerSecret) throw new Error("FatSecret credentials not configured");
 
-  const res = await fetch("https://oauth.fatsecret.com/connect/token", {
-    method: "POST",
-    headers: {
-      "Authorization": `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: "grant_type=client_credentials&scope=basic",
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`FatSecret auth failed [${res.status}]: ${text}`);
-  }
-
-  const data = await res.json();
-  cachedToken = {
-    token: data.access_token,
-    expiresAt: Date.now() + (data.expires_in - 60) * 1000,
+  const oauthParams: Record<string, string> = {
+    oauth_consumer_key: consumerKey,
+    oauth_nonce: generateNonce(),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_version: "1.0",
   };
-  return cachedToken.token;
+
+  // Combine all params
+  const allParams = { ...params, ...oauthParams };
+
+  // Sort and encode
+  const sortedKeys = Object.keys(allParams).sort();
+  const paramString = sortedKeys.map((k) => `${percentEncode(k)}=${percentEncode(allParams[k])}`).join("&");
+
+  // Signature base string
+  const signatureBase = `GET&${percentEncode(baseUrl)}&${percentEncode(paramString)}`;
+  const signingKey = `${percentEncode(consumerSecret)}&`;
+
+  const signature = await hmacSha1(signingKey, signatureBase);
+  allParams["oauth_signature"] = signature;
+
+  const qs = Object.entries(allParams)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
+
+  return `${baseUrl}?${qs}`;
 }
 
 serve(async (req) => {
@@ -52,29 +75,57 @@ serve(async (req) => {
   const barcode = url.searchParams.get("barcode") || "";
 
   try {
-    const token = await getAccessToken();
-    let apiUrl: string;
+    const baseUrl = "https://platform.fatsecret.com/rest/server.api";
+    let params: Record<string, string>;
 
     if (barcode) {
-      apiUrl = `https://platform.fatsecret.com/rest/food/barcode/find-by-id/v1?barcode=${encodeURIComponent(barcode)}&format=json`;
+      params = {
+        method: "food.find_id_for_barcode",
+        barcode,
+        format: "json",
+      };
     } else {
-      apiUrl = `https://platform.fatsecret.com/rest/foods/search/v1?search_expression=${encodeURIComponent(query)}&format=json&max_results=20&page_number=${page}`;
+      params = {
+        method: "foods.search",
+        search_expression: query,
+        format: "json",
+        max_results: "20",
+        page_number: page.toString(),
+      };
     }
 
-    const res = await fetch(apiUrl, {
-      headers: { "Authorization": `Bearer ${token}` },
-    });
+    const signedUrl = await buildOAuthUrl(baseUrl, params);
+    const res = await fetch(signedUrl);
 
     if (!res.ok) {
       const text = await res.text();
       console.error(`FatSecret API error [${res.status}]:`, text);
       return new Response(
-        JSON.stringify({ foods: [], error: "API_ERROR" }),
+        JSON.stringify({ foods: null, error: "API_ERROR" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const data = await res.json();
+
+    // For barcode lookup, we need a second call to get the food details
+    if (barcode && data.food_id?.value) {
+      const detailParams = {
+        method: "food.get.v4",
+        food_id: data.food_id.value,
+        format: "json",
+      };
+      const detailUrl = await buildOAuthUrl(baseUrl, detailParams);
+      const detailRes = await fetch(detailUrl);
+      if (detailRes.ok) {
+        const detailData = await detailRes.json();
+        return new Response(JSON.stringify(detailData), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -82,7 +133,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("FatSecret edge function error:", error);
     return new Response(
-      JSON.stringify({ foods: [], error: error.message }),
+      JSON.stringify({ foods: null, error: error.message }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
