@@ -324,6 +324,25 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
                   </div>
 
                   <div>
+                    <Label className="text-xs text-muted-foreground">Serving size</Label>
+                    <div className="flex gap-2 mt-1">
+                      {[100, 50, 25, 1].map((g) => (
+                        <button
+                          key={g}
+                          onClick={() => setServings(String(g / 100))}
+                          className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                            parseFloat(servings) === g / 100
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-secondary text-muted-foreground border-border hover:border-primary/50"
+                          }`}
+                        >
+                          {g}g
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
                     <Label className="text-xs text-muted-foreground">
                       Servings ({selected.servingSize || "100g"} per serving)
                     </Label>
