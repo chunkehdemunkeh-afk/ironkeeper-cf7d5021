@@ -47,6 +47,23 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
   const [favouriteNames, setFavouriteNames] = useState<Set<string>>(new Set());
   const [quickAdding, setQuickAdding] = useState<string | null>(null);
   const [mode, setMode] = useState<"search" | "manual" | "scan">("search");
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("recent-food-searches");
+      if (stored) setRecentSearches(JSON.parse(stored).slice(0, 5));
+    } catch {}
+  }, []);
+
+  const saveRecentSearch = (term: string) => {
+    const trimmed = term.trim().toLowerCase();
+    if (!trimmed) return;
+    const updated = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem("recent-food-searches", JSON.stringify(updated));
+  };
 
   // Fetch recents + favourites on open
   useEffect(() => {
@@ -89,11 +106,14 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
     })();
   }, [open, user]);
 
-  const doSearch = useCallback(async () => {
-    if (!query.trim()) return;
+  const doSearch = useCallback(async (searchQuery?: string) => {
+    const q = searchQuery ?? query;
+    if (!q.trim()) return;
+    if (searchQuery) setQuery(searchQuery);
     setSearching(true);
+    saveRecentSearch(q);
     try {
-      const items = await searchFoods(query);
+      const items = await searchFoods(q);
       setResults(items);
     } catch (e) {
       if (e instanceof ServiceUnavailableError) {
@@ -274,6 +294,22 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
                   </Button>
                 </form>
               </div>
+
+              {/* Recent searches */}
+              {!selected && results.length === 0 && !query && recentSearches.length > 0 && (
+                <div className="px-4 pb-2 flex flex-wrap gap-2">
+                  {recentSearches.map((term) => (
+                    <button
+                      key={term}
+                      onClick={() => doSearch(term)}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Clock className="h-3 w-3" />
+                      <span className="capitalize">{term}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {selected ? (
                 <div className="flex-1 p-4 space-y-4 overflow-y-auto">
