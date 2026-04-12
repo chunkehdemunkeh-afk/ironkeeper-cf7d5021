@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import FoodSearch from "@/components/food/FoodSearch";
 import TDEESetup from "@/components/food/TDEESetup";
+import NutritionSettings from "@/components/food/NutritionSettings";
 import WaterIntake from "@/components/food/WaterIntake";
 import { toast } from "sonner";
 
@@ -47,6 +48,7 @@ export default function FoodTracker() {
   const [goals, setGoals] = useState<Goals | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSetup, setShowSetup] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [searchMeal, setSearchMeal] = useState<MealType | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -76,6 +78,13 @@ export default function FoodTracker() {
   }, [user, date]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Listen for TDEE re-open from settings
+  useEffect(() => {
+    const handler = () => setShowSetup(true);
+    window.addEventListener("open-tdee-setup", handler);
+    return () => window.removeEventListener("open-tdee-setup", handler);
+  }, []);
 
   const deleteLog = async (id: string) => {
     await supabase.from("food_logs").delete().eq("id", id);
@@ -112,7 +121,7 @@ export default function FoodTracker() {
       {/* Header */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <h1 className="text-xl font-bold font-display">Nutrition</h1>
-        <Button variant="ghost" size="icon" onClick={() => setShowSetup(true)}>
+        <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
           <Settings className="h-4 w-4" />
         </Button>
       </div>
@@ -278,6 +287,13 @@ export default function FoodTracker() {
           onLogged={fetchData}
         />
       )}
+
+      {/* Nutrition settings sheet */}
+      <NutritionSettings
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        onSaved={fetchData}
+      />
     </div>
   );
 }
