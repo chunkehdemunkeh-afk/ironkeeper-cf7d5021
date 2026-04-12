@@ -79,6 +79,13 @@ export default function FoodTracker() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Listen for TDEE re-open from settings
+  useEffect(() => {
+    const handler = () => setShowSetup(true);
+    window.addEventListener("open-tdee-setup", handler);
+    return () => window.removeEventListener("open-tdee-setup", handler);
+  }, []);
+
   const deleteLog = async (id: string) => {
     await supabase.from("food_logs").delete().eq("id", id);
     setLogs((prev) => prev.filter((l) => l.id !== id));
