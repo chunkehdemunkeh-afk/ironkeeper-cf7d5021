@@ -121,7 +121,7 @@ export default function FoodTracker() {
       {/* Header */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <h1 className="text-xl font-bold font-display">Nutrition</h1>
-        <Button variant="ghost" size="icon" onClick={() => setShowSetup(true)}>
+        <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
           <Settings className="h-4 w-4" />
         </Button>
       </div>
