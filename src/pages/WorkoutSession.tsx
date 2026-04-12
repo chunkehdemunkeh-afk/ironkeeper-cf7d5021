@@ -113,6 +113,15 @@ function ExerciseDragItem({
             <Shuffle className="h-3 w-3" />
           </button>
         )}
+        {onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="flex h-6 w-6 items-center justify-center rounded-md bg-destructive/10 text-destructive mr-1 hover:bg-destructive/20 transition-colors"
+            title="Remove exercise"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        )}
         <button onClick={onToggleExpand}>
           {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </button>
