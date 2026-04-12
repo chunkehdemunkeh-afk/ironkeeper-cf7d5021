@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Loader2, X, Clock, RotateCcw, PenLine, ScanBarcode } from "lucide-react";
+import { Search, Plus, Loader2, X, Clock, RotateCcw, PenLine, ScanBarcode, Star } from "lucide-react";
 import { searchFoods, FoodItem } from "@/lib/open-food-facts";
 import ManualFoodEntry from "./ManualFoodEntry";
 import BarcodeScanner from "./BarcodeScanner";
@@ -13,7 +13,7 @@ import { toast } from "sonner";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
-interface RecentFood {
+interface SavedFood {
   food_name: string;
   brand: string | null;
   serving_size: string | null;
@@ -41,31 +41,50 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
   const [selected, setSelected] = useState<FoodItem | null>(null);
   const [servings, setServings] = useState("1");
   const [saving, setSaving] = useState(false);
-  const [recents, setRecents] = useState<RecentFood[]>([]);
+  const [recents, setRecents] = useState<SavedFood[]>([]);
+  const [favourites, setFavourites] = useState<SavedFood[]>([]);
+  const [favouriteNames, setFavouriteNames] = useState<Set<string>>(new Set());
   const [quickAdding, setQuickAdding] = useState<string | null>(null);
   const [mode, setMode] = useState<"search" | "manual" | "scan">("search");
 
+  // Fetch recents + favourites on open
   useEffect(() => {
     if (!open || !user) return;
     (async () => {
-      const { data } = await supabase
-        .from("food_logs")
-        .select("food_name, brand, serving_size, serving_qty, calories, protein_g, carbs_g, fat_g, barcode, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (!data) return;
-      const seen = new Set<string>();
-      const unique: RecentFood[] = [];
-      for (const row of data) {
-        const key = row.food_name.toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          unique.push(row as RecentFood);
+      const [logsRes, favsRes] = await Promise.all([
+        supabase
+          .from("food_logs")
+          .select("food_name, brand, serving_size, serving_qty, calories, protein_g, carbs_g, fat_g, barcode, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("favourite_foods")
+          .select("food_name, brand, serving_size, serving_qty, calories, protein_g, carbs_g, fat_g, barcode")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+      ]);
+
+      // Recents
+      if (logsRes.data) {
+        const seen = new Set<string>();
+        const unique: SavedFood[] = [];
+        for (const row of logsRes.data) {
+          const key = row.food_name.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(row as SavedFood);
+          }
+          if (unique.length >= 10) break;
         }
-        if (unique.length >= 10) break;
+        setRecents(unique);
       }
-      setRecents(unique);
+
+      // Favourites
+      if (favsRes.data) {
+        setFavourites(favsRes.data as SavedFood[]);
+        setFavouriteNames(new Set(favsRes.data.map((f) => f.food_name.toLowerCase())));
+      }
     })();
   }, [open, user]);
 
@@ -108,7 +127,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
     onClose();
   };
 
-  const quickAdd = async (food: RecentFood) => {
+  const quickAdd = async (food: SavedFood) => {
     if (!user) return;
     setQuickAdding(food.food_name);
     const { error } = await supabase.from("food_logs").insert({
@@ -135,7 +154,40 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
     onClose();
   };
 
-  const showRecents = !selected && results.length === 0 && !query && recents.length > 0;
+  const toggleFavourite = async (food: { name: string; brand?: string | null; servingSize?: string | null; calories: number; protein: number; carbs: number; fat: number; barcode?: string | null }) => {
+    if (!user) return;
+    const key = food.name.toLowerCase();
+    if (favouriteNames.has(key)) {
+      // Remove
+      await supabase.from("favourite_foods").delete().eq("user_id", user.id).eq("food_name", food.name);
+      setFavouriteNames((prev) => { const next = new Set(prev); next.delete(key); return next; });
+      setFavourites((prev) => prev.filter((f) => f.food_name.toLowerCase() !== key));
+      toast.success("Removed from favourites");
+    } else {
+      // Add
+      const { error } = await supabase.from("favourite_foods").insert({
+        user_id: user.id,
+        food_name: food.name,
+        brand: food.brand || null,
+        serving_size: food.servingSize || "100g",
+        serving_qty: 1,
+        calories: Math.round(food.calories),
+        protein_g: Math.round(food.protein * 10) / 10,
+        carbs_g: Math.round(food.carbs * 10) / 10,
+        fat_g: Math.round(food.fat * 10) / 10,
+        barcode: food.barcode || null,
+      });
+      if (error) {
+        toast.error("Failed to favourite");
+        return;
+      }
+      setFavouriteNames((prev) => new Set(prev).add(key));
+      setFavourites((prev) => [{ food_name: food.name, brand: food.brand || null, serving_size: food.servingSize || "100g", serving_qty: 1, calories: Math.round(food.calories), protein_g: Math.round(food.protein * 10) / 10, carbs_g: Math.round(food.carbs * 10) / 10, fat_g: Math.round(food.fat * 10) / 10, barcode: food.barcode || null }, ...prev]);
+      toast.success("Added to favourites");
+    }
+  };
+
+  const showQuickAccess = !selected && results.length === 0 && !query;
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -222,9 +274,19 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
                         <p className="text-xs text-muted-foreground">{selected.brand}</p>
                       )}
                     </div>
-                    <button onClick={() => setSelected(null)}>
-                      <X className="h-4 w-4 text-muted-foreground" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleFavourite(selected)}
+                        className="text-muted-foreground hover:text-amber-400 transition-colors"
+                      >
+                        <Star
+                          className={`h-5 w-5 ${favouriteNames.has(selected.name.toLowerCase()) ? "fill-amber-400 text-amber-400" : ""}`}
+                        />
+                      </button>
+                      <button onClick={() => setSelected(null)}>
+                        <X className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-4 gap-2 text-center p-3 rounded-xl bg-secondary/50">
@@ -275,8 +337,42 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
                 </div>
               ) : (
                 <div className="flex-1 overflow-y-auto px-4 space-y-2 pb-4">
-                  {showRecents && (
+                  {/* Favourites */}
+                  {showQuickAccess && favourites.length > 0 && (
                     <div className="space-y-2">
+                      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                        <span className="text-xs font-medium">Favourites</span>
+                      </div>
+                      {favourites.map((food, i) => (
+                        <button
+                          key={`fav-${i}`}
+                          onClick={() => quickAdd(food)}
+                          disabled={quickAdding === food.food_name}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors text-left disabled:opacity-50"
+                        >
+                          <div className="h-10 w-10 rounded-lg bg-amber-400/10 flex items-center justify-center shrink-0">
+                            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{food.food_name}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {food.serving_qty}× {food.serving_size || "100g"} · {Math.round(food.protein_g)}p · {Math.round(food.carbs_g)}c · {Math.round(food.fat_g)}f
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="text-sm font-bold text-primary">{Math.round(food.calories)}</div>
+                            <div className="text-[10px] text-muted-foreground">kcal</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Recents */}
+                  {showQuickAccess && recents.length > 0 && (
+                    <div className="space-y-2">
+                      {favourites.length > 0 && <div className="border-t border-border my-2" />}
                       <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                         <Clock className="h-3.5 w-3.5" />
                         <span className="text-xs font-medium">Recent Foods</span>
@@ -303,13 +399,19 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
                           </div>
                         </button>
                       ))}
+                    </div>
+                  )}
+
+                  {showQuickAccess && (favourites.length > 0 || recents.length > 0) && (
+                    <>
                       <div className="border-t border-border my-3" />
                       <p className="text-center text-xs text-muted-foreground">
                         Or search for new foods above
                       </p>
-                    </div>
+                    </>
                   )}
 
+                  {/* Search results */}
                   {results.length === 0 && !searching && query && (
                     <p className="text-center text-muted-foreground text-sm py-8">
                       No results found. Try a different search.
