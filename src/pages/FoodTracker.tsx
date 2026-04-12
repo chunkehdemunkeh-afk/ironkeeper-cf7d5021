@@ -203,6 +203,11 @@ export default function FoodTracker() {
         </motion.div>
       )}
 
+      {/* Water intake */}
+      <div className="mt-4">
+        <WaterIntake date={date} />
+      </div>
+
       {/* Meals */}
       {loading ? (
         <div className="flex justify-center py-12">
