@@ -15,19 +15,6 @@ interface Props {
   onComplete: () => void;
 }
 
-const ACTIVITY_ICONS: Record<ActivityLevel, string> = {
-  sedentary: "🪑",
-  light: "🚶",
-  moderate: "🏃",
-  active: "💪",
-  very_active: "🏋️",
-};
-
-const GOAL_ICONS: Record<GoalType, string> = {
-  lose: "📉",
-  maintain: "⚖️",
-  gain: "📈",
-};
 
 const GOAL_DESCRIPTIONS: Record<GoalType, string> = {
   lose: "Calorie deficit to lose body fat",
@@ -77,7 +64,7 @@ export default function TDEESetup({ onComplete }: Props) {
       toast.error("Failed to save goals");
       return;
     }
-    toast.success("Nutrition goals saved! 🎯");
+    toast.success("Nutrition goals saved!");
     onComplete();
   };
 
@@ -152,7 +139,6 @@ export default function TDEESetup({ onComplete }: Props) {
                             <Check className="h-3 w-3 text-primary-foreground" />
                           </div>
                         )}
-                        <p className="text-2xl mb-1">{g === "male" ? "👨" : "👩"}</p>
                         <p className="font-semibold text-foreground capitalize">{g}</p>
                       </motion.button>
                     ))}
@@ -238,7 +224,7 @@ export default function TDEESetup({ onComplete }: Props) {
                           : "border-border/50 glass-card hover:border-primary/30"
                       }`}
                     >
-                      <span className="text-xl">{ACTIVITY_ICONS[key]}</span>
+                      
                       <span className="flex-1 text-sm font-medium text-foreground">{label}</span>
                       {isSelected && (
                         <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary shrink-0">
@@ -280,7 +266,7 @@ export default function TDEESetup({ onComplete }: Props) {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-3">
-                          <span className="text-xl">{GOAL_ICONS[key]}</span>
+                          
                           <div>
                             <p className="text-sm font-semibold text-foreground">{label}</p>
                             <p className="text-[11px] text-muted-foreground mt-0.5">{GOAL_DESCRIPTIONS[key]}</p>
