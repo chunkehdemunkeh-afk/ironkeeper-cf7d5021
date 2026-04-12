@@ -42,7 +42,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
   const [saving, setSaving] = useState(false);
   const [recents, setRecents] = useState<RecentFood[]>([]);
   const [quickAdding, setQuickAdding] = useState<string | null>(null);
-
+  const [mode, setMode] = useState<"search" | "manual">("search");
   // Fetch recent unique foods on open
   useEffect(() => {
     if (!open || !user) return;
