@@ -40,6 +40,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<FoodItem | null>(null);
   const [servings, setServings] = useState("1");
+  const [servingGrams, setServingGrams] = useState(100);
   const [saving, setSaving] = useState(false);
   const [recents, setRecents] = useState<SavedFood[]>([]);
   const [favourites, setFavourites] = useState<SavedFood[]>([]);
@@ -107,18 +108,19 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
     if (!user || !selected) return;
     setSaving(true);
     const qty = Math.max(0.1, parseFloat(servings) || 1);
+    const multiplier = (servingGrams / 100) * qty;
     const { error } = await supabase.from("food_logs").insert({
       user_id: user.id,
       date,
       meal_type: mealType,
       food_name: selected.name,
       brand: selected.brand || null,
-      serving_size: selected.servingSize || "100g",
+      serving_size: `${servingGrams}g`,
       serving_qty: qty,
-      calories: Math.round(selected.calories * qty),
-      protein_g: Math.round(selected.protein * qty * 10) / 10,
-      carbs_g: Math.round(selected.carbs * qty * 10) / 10,
-      fat_g: Math.round(selected.fat * qty * 10) / 10,
+      calories: Math.round(selected.calories * multiplier),
+      protein_g: Math.round(selected.protein * multiplier * 10) / 10,
+      carbs_g: Math.round(selected.carbs * multiplier * 10) / 10,
+      fat_g: Math.round(selected.fat * multiplier * 10) / 10,
       barcode: selected.barcode || null,
     });
     setSaving(false);
@@ -243,6 +245,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
               onFoodFound={(food) => {
                 setSelected(food);
                 setServings("1");
+                setServingGrams(100);
                 setMode("search");
               }}
             />
@@ -296,65 +299,73 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2 text-center p-3 rounded-xl bg-secondary/50">
-                    <div>
-                      <div className="text-base font-bold text-primary">
-                        {Math.round(selected.calories * (parseFloat(servings) || 1))}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">kcal</div>
-                    </div>
-                    <div>
-                      <div className="text-base font-bold text-blue-400">
-                        {(selected.protein * (parseFloat(servings) || 1)).toFixed(1)}g
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">Protein</div>
-                    </div>
-                    <div>
-                      <div className="text-base font-bold text-amber-400">
-                        {(selected.carbs * (parseFloat(servings) || 1)).toFixed(1)}g
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">Carbs</div>
-                    </div>
-                    <div>
-                      <div className="text-base font-bold text-rose-400">
-                        {(selected.fat * (parseFloat(servings) || 1)).toFixed(1)}g
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">Fat</div>
-                    </div>
-                  </div>
+                  {(() => {
+                    const multiplier = (servingGrams / 100) * (parseFloat(servings) || 1);
+                    const totalGrams = servingGrams * (parseFloat(servings) || 1);
+                    return (
+                      <>
+                        <div className="grid grid-cols-4 gap-2 text-center p-3 rounded-xl bg-secondary/50">
+                          <div>
+                            <div className="text-base font-bold text-primary">
+                              {Math.round(selected.calories * multiplier)}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">kcal</div>
+                          </div>
+                          <div>
+                            <div className="text-base font-bold text-blue-400">
+                              {(selected.protein * multiplier).toFixed(1)}g
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">Protein</div>
+                          </div>
+                          <div>
+                            <div className="text-base font-bold text-amber-400">
+                              {(selected.carbs * multiplier).toFixed(1)}g
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">Carbs</div>
+                          </div>
+                          <div>
+                            <div className="text-base font-bold text-rose-400">
+                              {(selected.fat * multiplier).toFixed(1)}g
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">Fat</div>
+                          </div>
+                        </div>
 
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Serving size</Label>
-                    <div className="flex gap-2 mt-1">
-                      {[100, 50, 25, 1].map((g) => (
-                        <button
-                          key={g}
-                          onClick={() => setServings(String(g / 100))}
-                          className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                            parseFloat(servings) === g / 100
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-secondary text-muted-foreground border-border hover:border-primary/50"
-                          }`}
-                        >
-                          {g}g
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Serving size</Label>
+                          <div className="flex gap-2 mt-1">
+                            {[100, 50, 25, 1].map((g) => (
+                              <button
+                                key={g}
+                                onClick={() => { setServingGrams(g); setServings("1"); }}
+                                className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                                  servingGrams === g
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-secondary text-muted-foreground border-border hover:border-primary/50"
+                                }`}
+                              >
+                                {g}g
+                              </button>
+                            ))}
+                          </div>
+                        </div>
 
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Servings ({selected.servingSize || "100g"} per serving)
-                    </Label>
-                    <Input
-                      type="number"
-                      step="0.5"
-                      min="0.1"
-                      value={servings}
-                      onChange={(e) => setServings(e.target.value)}
-                      className="mt-1 h-12 text-lg"
-                    />
-                  </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">
+                            Servings of {servingGrams}g ({totalGrams}g total)
+                          </Label>
+                          <Input
+                            type="number"
+                            step="1"
+                            min="1"
+                            value={servings}
+                            onChange={(e) => setServings(e.target.value)}
+                            className="mt-1 h-12 text-lg"
+                          />
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   <Button onClick={handleLog} disabled={saving} className="w-full h-12 font-semibold">
                     <Plus className="h-4 w-4 mr-2" />
@@ -446,7 +457,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
                   {results.map((item, i) => (
                     <button
                       key={`${item.barcode}-${i}`}
-                      onClick={() => { setSelected(item); setServings("1"); }}
+                      onClick={() => { setSelected(item); setServings("1"); setServingGrams(100); }}
                       className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors text-left"
                     >
                       {item.imageUrl ? (
