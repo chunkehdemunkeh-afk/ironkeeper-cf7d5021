@@ -40,6 +40,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<FoodItem | null>(null);
   const [servings, setServings] = useState("1");
+  const [servingGrams, setServingGrams] = useState(100);
   const [saving, setSaving] = useState(false);
   const [recents, setRecents] = useState<SavedFood[]>([]);
   const [favourites, setFavourites] = useState<SavedFood[]>([]);
