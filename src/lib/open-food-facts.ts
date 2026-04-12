@@ -48,6 +48,10 @@ function parseProduct(p: OFFProduct): FoodItem | null {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
+export class ServiceUnavailableError extends Error {
+  constructor() { super("Food database is temporarily unavailable. Please try again shortly."); }
+}
+
 export async function searchFoods(query: string, page = 1): Promise<FoodItem[]> {
   if (!query.trim()) return [];
   try {
@@ -56,10 +60,12 @@ export async function searchFoods(query: string, page = 1): Promise<FoodItem[]> 
     );
     if (!res.ok) return [];
     const data = await res.json();
+    if (data.fallback) throw new ServiceUnavailableError();
     return (data.products as OFFProduct[])
       .map(parseProduct)
       .filter((p): p is FoodItem => p !== null && p.calories > 0);
-  } catch {
+  } catch (e) {
+    if (e instanceof ServiceUnavailableError) throw e;
     return [];
   }
 }
