@@ -19,6 +19,7 @@ import Login from "./pages/Login";
 import ExerciseLibrary from "./pages/ExerciseLibrary";
 import BodyMeasurements from "./pages/BodyMeasurements";
 import CoachDashboard from "./pages/CoachDashboard";
+import FoodTracker from "./pages/FoodTracker";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 import { isOnboardingComplete } from "@/lib/user-preferences";
@@ -76,6 +77,7 @@ const AnimatedRoutes = () => {
         <Route path="/sessions" element={<PageWrapper><ProtectedRoute><Sessions /></ProtectedRoute></PageWrapper>} />
         <Route path="/workout/:id" element={<PageWrapper><ProtectedRoute><WorkoutSession /></ProtectedRoute></PageWrapper>} />
         <Route path="/builder" element={<PageWrapper><ProtectedRoute><WorkoutBuilder /></ProtectedRoute></PageWrapper>} />
+        <Route path="/nutrition" element={<PageWrapper><ProtectedRoute><FoodTracker /></ProtectedRoute></PageWrapper>} />
         <Route path="/history" element={<PageWrapper><ProtectedRoute><History /></ProtectedRoute></PageWrapper>} />
         <Route path="/progress" element={<PageWrapper><ProtectedRoute><Progress /></ProtectedRoute></PageWrapper>} />
         <Route path="/profile" element={<PageWrapper><ProtectedRoute><Profile /></ProtectedRoute></PageWrapper>} />
