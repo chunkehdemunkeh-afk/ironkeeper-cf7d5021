@@ -222,6 +222,7 @@ export type Database = {
           tdee_weight_kg: number | null
           updated_at: string
           user_id: string
+          water_goal_ml: number
         }
         Insert: {
           calories?: number
@@ -238,6 +239,7 @@ export type Database = {
           tdee_weight_kg?: number | null
           updated_at?: string
           user_id: string
+          water_goal_ml?: number
         }
         Update: {
           calories?: number
@@ -254,6 +256,7 @@ export type Database = {
           tdee_weight_kg?: number | null
           updated_at?: string
           user_id?: string
+          water_goal_ml?: number
         }
         Relationships: []
       }

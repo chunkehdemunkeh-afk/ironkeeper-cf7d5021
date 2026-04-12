@@ -1,0 +1,1 @@
+ALTER TABLE public.nutrition_goals ADD COLUMN water_goal_ml INTEGER NOT NULL DEFAULT 2500;
