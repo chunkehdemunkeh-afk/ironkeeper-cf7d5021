@@ -54,11 +54,12 @@ function SwipeableSetRow({ children, onDelete }: { children: React.ReactNode; on
 }
 
 function ExerciseDragItem({ 
-  exId, isExpanded, allDone, index, name, sets, reps, onToggleExpand, onPlayVideo, onSwap, hasSubs, lastSub, children 
+  exId, isExpanded, allDone, index, name, sets, reps, onToggleExpand, onPlayVideo, onSwap, hasSubs, lastSub, onDelete, children 
 }: { 
   exId: string; isExpanded: boolean; allDone: boolean; index: number; name: string; sets: number; reps: string; 
   onToggleExpand: () => void; onPlayVideo: () => void; onSwap: () => void; hasSubs: boolean;
   lastSub?: { subName: string; subId: string };
+  onDelete?: () => void;
   children: React.ReactNode;
 }) {
   const dragControls = useDragControls();
@@ -110,6 +111,15 @@ function ExerciseDragItem({
             title="Swap exercise"
           >
             <Shuffle className="h-3 w-3" />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="flex h-6 w-6 items-center justify-center rounded-md bg-destructive/10 text-destructive mr-1 hover:bg-destructive/20 transition-colors"
+            title="Remove exercise"
+          >
+            <Trash2 className="h-3 w-3" />
           </button>
         )}
         <button onClick={onToggleExpand}>
@@ -328,6 +338,46 @@ export default function WorkoutSession() {
       setExerciseOrder(workout.exercises.map(ex => ex.id));
     }
   }, [workout, lastSessionData]);
+
+  // Check if an exercise belongs to an accessory routine
+  const getAccessoryForExercise = useCallback((exerciseId: string): string | null => {
+    for (const accId of addedAccessories) {
+      const routine = ACCESSORY_ROUTINES.find(r => r.id === accId);
+      if (routine?.exercises.some(e => e.id === exerciseId)) return accId;
+    }
+    return null;
+  }, [addedAccessories]);
+
+  const removeExercise = useCallback((exerciseId: string) => {
+    // Check if it's part of an accessory routine — remove the whole routine
+    const accId = getAccessoryForExercise(exerciseId);
+    if (accId) {
+      const routine = ACCESSORY_ROUTINES.find(r => r.id === accId);
+      if (routine) {
+        const exIds = routine.exercises.map(e => e.id);
+        setAddedAccessories(prev => prev.filter(id => id !== accId));
+        setExerciseOrder(prev => prev.filter(id => !exIds.includes(id)));
+        setSetLogs(prev => {
+          const next = { ...prev };
+          exIds.forEach(id => delete next[id]);
+          return next;
+        });
+        hapticMedium();
+        toast.success(`Removed ${routine.name} accessory`);
+        return;
+      }
+    }
+    // For regular exercises, remove just that one
+    setExerciseOrder(prev => prev.filter(id => id !== exerciseId));
+    setSetLogs(prev => {
+      const next = { ...prev };
+      delete next[exerciseId];
+      return next;
+    });
+    if (expandedExercise === exerciseId) setExpandedExercise(null);
+    hapticMedium();
+    toast.success("Exercise removed");
+  }, [getAccessoryForExercise, expandedExercise]);
 
   const addAccessory = useCallback((accId: string) => {
     const routine = ACCESSORY_ROUTINES.find(r => r.id === accId);
@@ -833,6 +883,7 @@ export default function WorkoutSession() {
                 onSwap={() => setSwapExerciseId(ex.id)}
                 hasSubs={hasSubs}
                 lastSub={!override ? lastSubstitutions[ex.id] : undefined}
+                onDelete={() => removeExercise(ex.id)}
               >
 
                 <AnimatePresence>
@@ -965,6 +1016,7 @@ export default function WorkoutSession() {
                           onPlayVideo={() => setVideoExercise({ name: gDisplayName, id: gExId })}
                           onSwap={() => setSwapExerciseId(gExId)}
                           hasSubs={gHasSubs}
+                          onDelete={() => removeExercise(gExId)}
                         >
                           <AnimatePresence>
                             {gIsExpanded && (
