@@ -13,6 +13,7 @@ import { hapticMedium, hapticSuccess } from "@/lib/haptics";
 import { EXERCISE_SUBSTITUTIONS, type SubstituteExercise } from "@/lib/exercise-substitutions";
 import { ACCESSORY_ROUTINES, ACCESSORY_SUBSTITUTIONS } from "@/lib/accessory-routines";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -174,6 +175,7 @@ export default function WorkoutSession() {
 
   const [started, setStarted] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [twoHandedExercises, setTwoHandedExercises] = useState<Set<string>>(new Set());
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
   const [exerciseOrder, setExerciseOrder] = useState<string[]>([]);
   const [setLogs, setSetLogs] = useState<Record<string, SetLog[]>>({});
@@ -190,8 +192,9 @@ export default function WorkoutSession() {
   const [lastSubstitutions, setLastSubstitutions] = useState<Record<string, { subName: string; subId: string }>>({}); 
   // Get the effective exercise ID for data lookups (substitute ID if swapped, otherwise original)
   const getEffectiveExId = useCallback((originalId: string) => {
-    return exerciseOverrides[originalId]?.substituteId || originalId;
-  }, [exerciseOverrides]);
+    const base = exerciseOverrides[originalId]?.substituteId || originalId;
+    return twoHandedExercises.has(originalId) ? `${base}-2h` : base;
+  }, [exerciseOverrides, twoHandedExercises]);
   const [restTimerKey, setRestTimerKey] = useState(0);
   const [restDuration, setRestDuration] = useState(workout?.id === "power" ? 45 : 60);
   const [videoExercise, setVideoExercise] = useState<{ name: string; id: string } | null>(null);
@@ -213,6 +216,7 @@ export default function WorkoutSession() {
       exerciseOverrides,
       addedAccessories,
       bodyweightExercises: Array.from(bodyweightExercises),
+      twoHandedExercises: Array.from(twoHandedExercises),
       elapsed,
       expandedExercise,
       weightUpSuggestions,
@@ -224,7 +228,7 @@ export default function WorkoutSession() {
     } catch (e) {
       console.warn("Failed to auto-save workout:", e);
     }
-  }, [autoSaveKey, started, finished, showFeedback, setLogs, exerciseNotes, exerciseOrder, exerciseOverrides, addedAccessories, bodyweightExercises, elapsed, expandedExercise, weightUpSuggestions, weightDownSuggestions]);
+  }, [autoSaveKey, started, finished, showFeedback, setLogs, exerciseNotes, exerciseOrder, exerciseOverrides, addedAccessories, bodyweightExercises, twoHandedExercises, elapsed, expandedExercise, weightUpSuggestions, weightDownSuggestions]);
 
   // Save on visibility change (user switching apps / leaving)
   useEffect(() => {
@@ -286,6 +290,7 @@ export default function WorkoutSession() {
         setExerciseOverrides(parsed.exerciseOverrides || {});
         setAddedAccessories(parsed.addedAccessories || []);
         setBodyweightExercises(new Set(parsed.bodyweightExercises || []));
+        setTwoHandedExercises(new Set(parsed.twoHandedExercises || []));
         setElapsed(parsed.elapsed || 0);
         setExpandedExercise(parsed.expandedExercise || null);
         setWeightUpSuggestions(parsed.weightUpSuggestions || {});
@@ -959,20 +964,36 @@ export default function WorkoutSession() {
                           return (
                             <>
                               {!isTimeBased && (override?.trackWeight ?? ex.trackWeight) !== false && (
-                                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none mb-1">
-                                  <input
-                                    type="checkbox"
-                                    checked={isBW}
-                                    onChange={() => setBodyweightExercises(prev => {
-                                      const next = new Set(prev);
-                                      if (next.has(ex.id)) next.delete(ex.id);
-                                      else next.add(ex.id);
-                                      return next;
-                                    })}
-                                    className="rounded border-border accent-primary h-3.5 w-3.5"
-                                  />
-                                  Bodyweight
-                                </label>
+                                <div className="flex items-center gap-3 mb-1">
+                                  <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+                                    <Switch
+                                      checked={isBW}
+                                      onCheckedChange={() => setBodyweightExercises(prev => {
+                                        const next = new Set(prev);
+                                        if (next.has(ex.id)) next.delete(ex.id);
+                                        else next.add(ex.id);
+                                        return next;
+                                      })}
+                                      className="h-4 w-7 data-[state=checked]:bg-primary [&>span]:h-3 [&>span]:w-3"
+                                    />
+                                    Bodyweight
+                                  </label>
+                                  {ex.id === "acc-grip1" && (
+                                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+                                      <Switch
+                                        checked={twoHandedExercises.has(ex.id)}
+                                        onCheckedChange={() => setTwoHandedExercises(prev => {
+                                          const next = new Set(prev);
+                                          if (next.has(ex.id)) next.delete(ex.id);
+                                          else next.add(ex.id);
+                                          return next;
+                                        })}
+                                        className="h-4 w-7 data-[state=checked]:bg-primary [&>span]:h-3 [&>span]:w-3"
+                                      />
+                                      2 Handed
+                                    </label>
+                                  )}
+                                </div>
                               )}
                               <div className={`grid ${isTimeBased ? "grid-cols-[28px_1fr_36px]" : showWeight ? "grid-cols-[28px_1fr_1fr_36px]" : "grid-cols-[28px_1fr_36px]"} gap-x-1.5 items-center text-[10px] text-muted-foreground font-medium uppercase tracking-wider`}>
                                 <span className="text-center">Set</span>
@@ -1094,20 +1115,36 @@ export default function WorkoutSession() {
                                     const isTimeBased = repLabel === "Sec";
                                     if (!isTimeBased && canTrackWeight) {
                                       return (
-                                        <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none ml-auto">
-                                          <input
-                                            type="checkbox"
-                                            checked={bodyweightExercises.has(gExId)}
-                                            onChange={() => setBodyweightExercises(prev => {
-                                              const next = new Set(prev);
-                                              if (next.has(gExId)) next.delete(gExId);
-                                              else next.add(gExId);
-                                              return next;
-                                            })}
-                                            className="rounded border-border accent-primary h-3 w-3"
-                                          />
-                                          BW
-                                        </label>
+                                        <div className="flex items-center gap-2 ml-auto">
+                                          <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none">
+                                            <Switch
+                                              checked={bodyweightExercises.has(gExId)}
+                                              onCheckedChange={() => setBodyweightExercises(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(gExId)) next.delete(gExId);
+                                                else next.add(gExId);
+                                                return next;
+                                              })}
+                                              className="h-4 w-7 data-[state=checked]:bg-primary [&>span]:h-3 [&>span]:w-3"
+                                            />
+                                            BW
+                                          </label>
+                                          {gExId === "acc-grip1" && (
+                                            <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none">
+                                              <Switch
+                                                checked={twoHandedExercises.has(gExId)}
+                                                onCheckedChange={() => setTwoHandedExercises(prev => {
+                                                  const next = new Set(prev);
+                                                  if (next.has(gExId)) next.delete(gExId);
+                                                  else next.add(gExId);
+                                                  return next;
+                                                })}
+                                                className="h-4 w-7 data-[state=checked]:bg-primary [&>span]:h-3 [&>span]:w-3"
+                                              />
+                                              2H
+                                            </label>
+                                          )}
+                                        </div>
                                       );
                                     }
                                     return null;
