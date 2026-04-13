@@ -1055,9 +1055,8 @@ export default function WorkoutSession() {
                   {/* Superset header card */}
                   <div
                     className={`glass-card rounded-xl overflow-hidden transition-all border ${allGroupDone ? "border-success/40 bg-success/5" : "border-border/50"}`}
-                    onClick={() => setExpandedExercise(isSSExpanded ? null : `ss-${ex.id}`)}
                   >
-                    <div className="flex items-center gap-3 px-3 py-2.5 cursor-pointer">
+                    <div className="flex items-center gap-3 px-3 py-2.5 cursor-pointer" onClick={() => setExpandedExercise(isSSExpanded ? null : `ss-${ex.id}`)}>
                       <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold ${allGroupDone ? "bg-success/20 text-success" : "bg-primary/10 text-primary"}`}>
                         {allGroupDone ? <Check className="h-4 w-4" /> : <Flame className="h-4 w-4" />}
                       </div>
