@@ -18,9 +18,9 @@ serve(async (req) => {
   try {
     let offUrl: string;
     if (barcode) {
-      offUrl = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=code,product_name,brands,serving_size,nutriments,image_front_small_url`;
+      offUrl = `https://uk.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=code,product_name,brands,serving_size,nutriments,image_front_small_url`;
     } else {
-      offUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=20&page=${page}&fields=code,product_name,brands,serving_size,nutriments,image_front_small_url`;
+      offUrl = `https://uk.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=20&page=${page}&fields=code,product_name,brands,serving_size,nutriments,image_front_small_url`;
     }
 
     const res = await fetch(offUrl, {
