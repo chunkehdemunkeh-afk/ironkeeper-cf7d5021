@@ -958,6 +958,22 @@ export default function WorkoutSession() {
 
                           return (
                             <>
+                              {!isTimeBased && (override?.trackWeight ?? ex.trackWeight) !== false && (
+                                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none mb-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={isBW}
+                                    onChange={() => setBodyweightExercises(prev => {
+                                      const next = new Set(prev);
+                                      if (next.has(ex.id)) next.delete(ex.id);
+                                      else next.add(ex.id);
+                                      return next;
+                                    })}
+                                    className="rounded border-border accent-primary h-3.5 w-3.5"
+                                  />
+                                  Bodyweight
+                                </label>
+                              )}
                               <div className={`grid ${isTimeBased ? "grid-cols-[28px_1fr_36px]" : showWeight ? "grid-cols-[28px_1fr_1fr_36px]" : "grid-cols-[28px_1fr_36px]"} gap-x-1.5 items-center text-[10px] text-muted-foreground font-medium uppercase tracking-wider`}>
                                 <span className="text-center">Set</span>
                                 {!isTimeBased && showWeight && <span className="text-center">{weightLabel}</span>}
