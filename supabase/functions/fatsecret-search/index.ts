@@ -90,7 +90,7 @@ serve(async (req) => {
       };
     } else {
       params = {
-        method: "foods.search.v3",
+        method: "foods.search.v2",
         search_expression: query,
         format: "json",
         max_results: "20",
