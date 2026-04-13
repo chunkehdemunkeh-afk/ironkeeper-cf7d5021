@@ -117,7 +117,7 @@ serve(async (req) => {
     // For barcode lookup, we need a second call to get the food details
     if (barcode && data.food_id?.value) {
       const detailParams = {
-        method: "food.get.v4",
+        method: "food.get",
         food_id: data.food_id.value,
         format: "json",
         region,
