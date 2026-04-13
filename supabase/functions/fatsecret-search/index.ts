@@ -73,6 +73,8 @@ serve(async (req) => {
   const query = url.searchParams.get("q") || "";
   const page = parseInt(url.searchParams.get("page") || "0");
   const barcode = url.searchParams.get("barcode") || "";
+  const region = url.searchParams.get("region") || "GB";
+  const language = url.searchParams.get("language") || "en";
 
   try {
     const baseUrl = "https://platform.fatsecret.com/rest/server.api";
@@ -83,6 +85,8 @@ serve(async (req) => {
         method: "food.find_id_for_barcode",
         barcode,
         format: "json",
+        region,
+        language,
       };
     } else {
       params = {
@@ -91,6 +95,8 @@ serve(async (req) => {
         format: "json",
         max_results: "20",
         page_number: page.toString(),
+        region,
+        language,
       };
     }
 
