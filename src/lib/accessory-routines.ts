@@ -14,9 +14,10 @@ export const ACCESSORY_ROUTINES: AccessoryRoutine[] = [
     id: "acc-abs",
     name: "Abs",
     emoji: "🔥",
+    superset: true,
     exercises: [
-      { id: "acc-abs1", name: "Cable Crunches", sets: 3, reps: "12-15", targetMuscle: "Abs", notes: "Focus on curling the torso, not pulling with arms" },
-      { id: "acc-abs2", name: "Oblique Leg Raises", sets: 3, reps: "12-15 each", targetMuscle: "Obliques", notes: "Lie on side, raise legs together using obliques, controlled lowering" },
+      { id: "acc-abs1", name: "Cable Crunches", sets: 3, reps: "12-15", targetMuscle: "Abs", notes: "SUPERSET with Oblique Leg Raises — focus on curling the torso, not pulling with arms" },
+      { id: "acc-abs2", name: "Oblique Leg Raises", sets: 3, reps: "12-15 each", targetMuscle: "Obliques", notes: "SUPERSET with Cable Crunches — lie on side, raise legs together using obliques, controlled lowering" },
     ],
   },
   {
