@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { format, addDays, subDays } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, Settings, Trash2, Flame, Beef, Wheat, Droplets } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Settings, Trash2, Flame, Beef, Wheat, Droplets, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import FoodSearch from "@/components/food/FoodSearch";
 import TDEESetup from "@/components/food/TDEESetup";
 import NutritionSettings from "@/components/food/NutritionSettings";
 import WaterIntake from "@/components/food/WaterIntake";
+import CompleteDaySummary from "@/components/food/CompleteDaySummary";
 import { toast } from "sonner";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
@@ -50,11 +51,14 @@ export default function FoodTracker() {
   const [showSetup, setShowSetup] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [searchMeal, setSearchMeal] = useState<MealType | null>(null);
+  const [showComplete, setShowComplete] = useState(false);
+  const [waterMl, setWaterMl] = useState(0);
+  const [waterGoalMl, setWaterGoalMl] = useState(2500);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [logsRes, goalsRes] = await Promise.all([
+    const [logsRes, goalsRes, waterRes] = await Promise.all([
       supabase
         .from("food_logs")
         .select("id, meal_type, food_name, brand, serving_qty, serving_size, calories, protein_g, carbs_g, fat_g")
@@ -63,17 +67,25 @@ export default function FoodTracker() {
         .order("created_at"),
       supabase
         .from("nutrition_goals")
-        .select("calories, protein_g, carbs_g, fat_g")
+        .select("calories, protein_g, carbs_g, fat_g, water_goal_ml")
         .eq("user_id", user.id)
         .maybeSingle(),
+      supabase
+        .from("water_intake")
+        .select("amount_ml")
+        .eq("user_id", user.id)
+        .eq("date", date),
     ]);
     setLogs((logsRes.data as FoodLog[]) || []);
     if (goalsRes.data) {
       setGoals(goalsRes.data as Goals);
+      if ((goalsRes.data as any).water_goal_ml) setWaterGoalMl((goalsRes.data as any).water_goal_ml);
     } else {
       setGoals(null);
       setShowSetup(true);
     }
+    const water = waterRes.data || [];
+    setWaterMl(water.reduce((s: number, e: any) => s + e.amount_ml, 0));
     setLoading(false);
   }, [user, date]);
 
