@@ -98,7 +98,7 @@ export async function searchFoods(query: string, page = 1): Promise<FoodItem[]> 
   // Try FatSecret first
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/functions/v1/fatsecret-search?q=${encodeURIComponent(query)}&page=${Math.max(0, page - 1)}`
+      `${SUPABASE_URL}/functions/v1/fatsecret-search?q=${encodeURIComponent(query)}&page=${Math.max(0, page - 1)}&region=GB&language=en`
     );
     if (res.ok) {
       const data = await res.json();
