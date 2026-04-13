@@ -77,10 +77,11 @@ serve(async (req) => {
   const language = url.searchParams.get("language") || "en";
 
   try {
-    const baseUrl = "https://platform.fatsecret.com/rest/server.api";
+    let baseUrl: string;
     let params: Record<string, string>;
 
     if (barcode) {
+      baseUrl = "https://platform.fatsecret.com/rest/server.api";
       params = {
         method: "food.find_id_for_barcode",
         barcode,
@@ -89,8 +90,9 @@ serve(async (req) => {
         language,
       };
     } else {
+      // Use v2 endpoint which properly supports region filtering
+      baseUrl = "https://platform.fatsecret.com/rest/foods/search/v2";
       params = {
-        method: "foods.search",
         search_expression: query,
         format: "json",
         max_results: "20",
