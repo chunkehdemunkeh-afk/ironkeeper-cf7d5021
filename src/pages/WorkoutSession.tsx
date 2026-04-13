@@ -199,6 +199,7 @@ export default function WorkoutSession() {
   const [weightUpSuggestions, setWeightUpSuggestions] = useState<Record<string, number[]>>({});
   const [weightDownSuggestions, setWeightDownSuggestions] = useState<Record<string, number[]>>({});
   const [addedAccessories, setAddedAccessories] = useState<string[]>([]);
+  const [bodyweightExercises, setBodyweightExercises] = useState<Set<string>>(new Set());
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const autoSaveKey = workout ? `workout-autosave-${workout.id}` : null;
 
@@ -211,6 +212,7 @@ export default function WorkoutSession() {
       exerciseOrder,
       exerciseOverrides,
       addedAccessories,
+      bodyweightExercises: Array.from(bodyweightExercises),
       elapsed,
       expandedExercise,
       weightUpSuggestions,
@@ -222,7 +224,7 @@ export default function WorkoutSession() {
     } catch (e) {
       console.warn("Failed to auto-save workout:", e);
     }
-  }, [autoSaveKey, started, finished, showFeedback, setLogs, exerciseNotes, exerciseOrder, exerciseOverrides, addedAccessories, elapsed, expandedExercise, weightUpSuggestions, weightDownSuggestions]);
+  }, [autoSaveKey, started, finished, showFeedback, setLogs, exerciseNotes, exerciseOrder, exerciseOverrides, addedAccessories, bodyweightExercises, elapsed, expandedExercise, weightUpSuggestions, weightDownSuggestions]);
 
   // Save on visibility change (user switching apps / leaving)
   useEffect(() => {
@@ -283,6 +285,7 @@ export default function WorkoutSession() {
         setExerciseOrder(parsed.exerciseOrder || []);
         setExerciseOverrides(parsed.exerciseOverrides || {});
         setAddedAccessories(parsed.addedAccessories || []);
+        setBodyweightExercises(new Set(parsed.bodyweightExercises || []));
         setElapsed(parsed.elapsed || 0);
         setExpandedExercise(parsed.expandedExercise || null);
         setWeightUpSuggestions(parsed.weightUpSuggestions || {});
@@ -941,7 +944,8 @@ export default function WorkoutSession() {
                           className="w-full rounded-lg bg-muted/50 border border-border/50 px-2.5 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground/40 resize-none"
                         />
                         {(() => {
-                          const showWeight = (override?.trackWeight ?? ex.trackWeight) !== false;
+                          const isBW = bodyweightExercises.has(ex.id);
+                          const showWeight = !isBW && (override?.trackWeight ?? ex.trackWeight) !== false;
                           const repLabel = override?.repLabel || ex.repLabel || "Reps";
                           const weightLabel = override?.weightLabel || ex.weightLabel || "Kg";
                           const isTimeBased = repLabel === "Sec";
@@ -954,6 +958,22 @@ export default function WorkoutSession() {
 
                           return (
                             <>
+                              {!isTimeBased && (override?.trackWeight ?? ex.trackWeight) !== false && (
+                                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none mb-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={isBW}
+                                    onChange={() => setBodyweightExercises(prev => {
+                                      const next = new Set(prev);
+                                      if (next.has(ex.id)) next.delete(ex.id);
+                                      else next.add(ex.id);
+                                      return next;
+                                    })}
+                                    className="rounded border-border accent-primary h-3.5 w-3.5"
+                                  />
+                                  Bodyweight
+                                </label>
+                              )}
                               <div className={`grid ${isTimeBased ? "grid-cols-[28px_1fr_36px]" : showWeight ? "grid-cols-[28px_1fr_1fr_36px]" : "grid-cols-[28px_1fr_36px]"} gap-x-1.5 items-center text-[10px] text-muted-foreground font-medium uppercase tracking-wider`}>
                                 <span className="text-center">Set</span>
                                 {!isTimeBased && showWeight && <span className="text-center">{weightLabel}</span>}
@@ -1073,7 +1093,8 @@ export default function WorkoutSession() {
                                     className="w-full rounded-lg bg-muted/50 border border-border/50 px-2.5 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground/40 resize-none"
                                   />
                                   {(() => {
-                                    const showWeight = (gOverride?.trackWeight ?? gEx.trackWeight) !== false;
+                                    const isBW = bodyweightExercises.has(gExId);
+                                    const showWeight = !isBW && (gOverride?.trackWeight ?? gEx.trackWeight) !== false;
                                     const repLabel = gOverride?.repLabel || gEx.repLabel || "Reps";
                                     const weightLabel = gOverride?.weightLabel || gEx.weightLabel || "Kg";
                                     const isTimeBased = repLabel === "Sec";
@@ -1085,6 +1106,22 @@ export default function WorkoutSession() {
 
                                     return (
                                       <>
+                                        {!isTimeBased && (gOverride?.trackWeight ?? gEx.trackWeight) !== false && (
+                                          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none mb-1">
+                                            <input
+                                              type="checkbox"
+                                              checked={isBW}
+                                              onChange={() => setBodyweightExercises(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(gExId)) next.delete(gExId);
+                                                else next.add(gExId);
+                                                return next;
+                                              })}
+                                              className="rounded border-border accent-primary h-3.5 w-3.5"
+                                            />
+                                            Bodyweight
+                                          </label>
+                                        )}
                                         <div className={`grid ${isTimeBased ? "grid-cols-[28px_1fr_36px]" : showWeight ? "grid-cols-[28px_1fr_1fr_36px]" : "grid-cols-[28px_1fr_36px]"} gap-x-1.5 items-center text-[10px] text-muted-foreground font-medium uppercase tracking-wider`}>
                                           <span className="text-center">Set</span>
                                           {!isTimeBased && showWeight && <span className="text-center">{weightLabel}</span>}
