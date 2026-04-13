@@ -285,6 +285,7 @@ export default function WorkoutSession() {
         setExerciseOrder(parsed.exerciseOrder || []);
         setExerciseOverrides(parsed.exerciseOverrides || {});
         setAddedAccessories(parsed.addedAccessories || []);
+        setBodyweightExercises(new Set(parsed.bodyweightExercises || []));
         setElapsed(parsed.elapsed || 0);
         setExpandedExercise(parsed.expandedExercise || null);
         setWeightUpSuggestions(parsed.weightUpSuggestions || {});
