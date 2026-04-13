@@ -128,6 +128,22 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
     setSearching(false);
   }, [query]);
 
+  const selectFood = (food: FoodItem) => {
+    setSelected(food);
+    setEditCalories(String(Math.round(food.calories)));
+    setEditProtein(String(Math.round(food.protein * 10) / 10));
+    setEditCarbs(String(Math.round(food.carbs * 10) / 10));
+    setEditFat(String(Math.round(food.fat * 10) / 10));
+    setServings("1");
+    setServingGrams(100);
+  };
+
+  // Per-100g base values (edited by user)
+  const baseCal = parseFloat(editCalories) || 0;
+  const basePro = parseFloat(editProtein) || 0;
+  const baseCarb = parseFloat(editCarbs) || 0;
+  const baseFat = parseFloat(editFat) || 0;
+
   const handleLog = async () => {
     if (!user || !selected) return;
     setSaving(true);
@@ -141,10 +157,10 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged }: 
       brand: selected.brand || null,
       serving_size: `${servingGrams}g`,
       serving_qty: qty,
-      calories: Math.round(selected.calories * multiplier),
-      protein_g: Math.round(selected.protein * multiplier * 10) / 10,
-      carbs_g: Math.round(selected.carbs * multiplier * 10) / 10,
-      fat_g: Math.round(selected.fat * multiplier * 10) / 10,
+      calories: Math.round(baseCal * multiplier),
+      protein_g: Math.round(basePro * multiplier * 10) / 10,
+      carbs_g: Math.round(baseCarb * multiplier * 10) / 10,
+      fat_g: Math.round(baseFat * multiplier * 10) / 10,
       barcode: selected.barcode || null,
     });
     setSaving(false);
