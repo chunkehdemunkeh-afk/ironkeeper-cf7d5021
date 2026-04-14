@@ -44,9 +44,17 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
       await scanner.start(
         { facingMode: "environment" },
         {
-          fps: 10,
-          qrbox: { width: 250, height: 120 },
+          fps: 30,
+          qrbox: { width: 280, height: 140 },
           aspectRatio: 1.5,
+          videoConstraints: {
+            facingMode: "environment",
+            advanced: [
+              { focusMode: "continuous" } as any,
+              { width: { ideal: 1920 } } as any,
+              { height: { ideal: 1080 } } as any,
+            ],
+          },
         },
         async (decodedText) => {
           if (processedRef.current) return;
