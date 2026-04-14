@@ -16,6 +16,8 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-14",
     title: "Updates & Fixes",
     changes: [
+      "Food tracker improvements",
+      "Barcode scanner improvements",
       "Profile page updates",
       "Home screen improvements",
       "App reliability & performance",
