@@ -12,16 +12,36 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.5.0",
+    version: "1.6.0",
     date: "2026-04-14",
-    title: "Barcode Scanner & Meal Copy",
+    title: "Updates & Improvements",
     changes: [
-      "Improved barcode scanner focus on iPhone with zoom slider",
-      "Copy/duplicate meals from previous days",
-      "Edit logged food items inline",
+      "App now auto-updates in the background with a visible banner",
+      "\"What's New\" sheet shows changes after each update",
+      "Barcode scanner improved on iPhone — better focus & zoom slider",
+      "Camera now selects the correct rear lens on iPhones",
+      "Copy/duplicate meals from previous days with one tap",
+      "Edit logged food items — tap any entry to adjust servings",
       "Favourite foods for quick re-logging",
+      "Editable calories & macros before logging a food item",
+      "Tidied up nutrient display on logged food entries",
       "Weekly nutrition averages now exclude untracked days",
-      "Auto-update system for installed apps",
+      "Custom calorie input no longer gets stuck at 800",
+      "Nutrition card and Next Session card are now clickable",
+    ],
+  },
+  {
+    version: "1.5.0",
+    date: "2026-04-12",
+    title: "Food Tracker",
+    changes: [
+      "Full food tracker with meal logging and macro tracking",
+      "TDEE calculator for personalised calorie goals",
+      "Search foods via Open Food Facts database",
+      "Barcode scanner for quick food lookup",
+      "Manual food entry for custom items",
+      "Quick-add from recently logged foods",
+      "Daily water intake tracking",
     ],
   },
 ];
