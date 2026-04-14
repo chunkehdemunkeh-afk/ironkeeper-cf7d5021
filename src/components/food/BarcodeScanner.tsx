@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
-import { Loader2, Camera, X } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Loader2, Camera, X, ZoomIn } from "lucide-react";
 import { lookupBarcode, FoodItem } from "@/lib/open-food-facts";
 import { toast } from "sonner";
 
@@ -13,15 +14,19 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
   const [scanning, setScanning] = useState(false);
   const [looking, setLooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const processedRef = useRef(false);
+  const trackRef = useRef<MediaStreamTrack | null>(null);
 
   const stopScanner = async () => {
+    trackRef.current = null;
     if (scannerRef.current) {
       try {
         const state = scannerRef.current.getState();
-        if (state === 2) { // SCANNING
+        if (state === 2) {
           await scannerRef.current.stop();
         }
       } catch {
@@ -30,6 +35,19 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
       scannerRef.current = null;
     }
     setScanning(false);
+    setZoom(1);
+    setZoomRange(null);
+  };
+
+  const applyZoom = async (level: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    try {
+      await track.applyConstraints({ advanced: [{ zoom: level } as any] });
+      setZoom(level);
+    } catch {
+      // zoom not supported
+    }
   };
 
   const startScanner = async () => {
@@ -88,15 +106,38 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
             processedRef.current = false;
           }
         },
-        () => {} // ignore scan failures
+        () => {}
       );
 
+      // Get the video track for zoom & focus control
       try {
-        await scanner.applyVideoConstraints({
-          advanced: [{ focusMode: "continuous" } as any],
-        });
+        const settings = scanner.getRunningTrackSettings() as any;
+        const videoElement = document.querySelector("#barcode-reader video") as HTMLVideoElement | null;
+        const track = videoElement?.srcObject instanceof MediaStream
+          ? videoElement.srcObject.getVideoTracks()[0]
+          : null;
+
+        if (track) {
+          trackRef.current = track;
+          const capabilities = track.getCapabilities() as any;
+
+          // Apply continuous autofocus
+          if (capabilities?.focusMode?.includes("continuous")) {
+            await track.applyConstraints({ advanced: [{ focusMode: "continuous" } as any] });
+          }
+
+          // Expose zoom slider if supported
+          if (capabilities?.zoom) {
+            const min = capabilities.zoom.min ?? 1;
+            const max = Math.min(capabilities.zoom.max ?? 1, 8);
+            if (max > min) {
+              setZoomRange({ min, max });
+              setZoom(settings?.zoom ?? min);
+            }
+          }
+        }
       } catch {
-        // Some iPhone browsers ignore unsupported autofocus constraints
+        // zoom/focus not available
       }
     } catch (err) {
       setScanning(false);
@@ -152,13 +193,29 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
       />
 
       {scanning && (
-        <div className="text-center space-y-3">
-          <p className="text-xs text-muted-foreground">
-            Point at a barcode on food packaging
-          </p>
-          <Button variant="outline" size="sm" onClick={stopScanner}>
-            <X className="h-3.5 w-3.5 mr-1" /> Cancel
-          </Button>
+        <div className="w-full max-w-[320px] space-y-3">
+          {zoomRange && (
+            <div className="flex items-center gap-3 px-1">
+              <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Slider
+                min={zoomRange.min}
+                max={zoomRange.max}
+                step={0.1}
+                value={[zoom]}
+                onValueChange={([v]) => applyZoom(v)}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-8 text-right">{zoom.toFixed(1)}×</span>
+            </div>
+          )}
+          <div className="text-center space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Point at a barcode on food packaging
+            </p>
+            <Button variant="outline" size="sm" onClick={stopScanner}>
+              <X className="h-3.5 w-3.5 mr-1" /> Cancel
+            </Button>
+          </div>
         </div>
       )}
     </div>
