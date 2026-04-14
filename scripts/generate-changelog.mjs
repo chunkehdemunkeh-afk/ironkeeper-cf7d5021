@@ -155,15 +155,10 @@ const bulletList = changes.slice(0, 8)
 // ── Determine version for the new entry ───────────────────────────────────────
 
 const todayInFile = content.includes(`date: "${today}"`);
-let newVersion;
 
-if (todayInFile) {
-  // Replacing today's entry — keep the same version
-  newVersion = latestVersion;
-} else {
-  // New day → bump patch (or minor for significant releases)
-  newVersion = bumpPatch(latestVersion);
-}
+// Always bump the version so the "What's New" sheet triggers on cold boots
+// even if we deploy multiple times in the same day.
+const newVersion = bumpPatch(latestVersion);
 
 // ── Build the new changelog entry ─────────────────────────────────────────────
 
