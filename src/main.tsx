@@ -25,7 +25,11 @@ function applyUpdate() {
   window.dispatchEvent(new Event("ik-updating"));
 
   // Tell App.tsx to open the "What's New" sheet after the reload
-  try { localStorage.setItem("ik-just-updated", "1"); } catch {}
+  try {
+    localStorage.setItem("ik-just-updated", "1");
+    // Clear the stored hash so the new version is established as the baseline on reboot
+    localStorage.removeItem("ik-html-hash");
+  } catch {}
 
   // Short delay — user sees the banner before the page disappears
   setTimeout(() => window.location.reload(), 1200);
@@ -73,6 +77,10 @@ if (!isInIframe && !isPreviewHost) {
   };
 
   let baselineHash: number | null = null;
+  try {
+    const stored = localStorage.getItem("ik-html-hash");
+    if (stored) baselineHash = parseInt(stored, 10);
+  } catch {}
 
   const pollVersion = async () => {
     if (updateInProgress) return;
@@ -82,6 +90,7 @@ if (!isInIframe && !isPreviewHost) {
       const hash = djb2(await res.text());
       if (baselineHash === null) {
         baselineHash = hash;          // record the version we started with
+        try { localStorage.setItem("ik-html-hash", hash.toString()); } catch {}
       } else if (hash !== baselineHash) {
         applyUpdate();                // new version on the server → update
       }
@@ -92,6 +101,17 @@ if (!isInIframe && !isPreviewHost) {
 
   void pollVersion();
   setInterval(() => void pollVersion(), 60_000);
+
+  // iOS PWAs freeze when backgrounded and often skip setInterval.
+  // Check immediately when the app comes back to the foreground.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      void pollVersion();
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.ready.then((reg) => reg.update());
+      }
+    }
+  });
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

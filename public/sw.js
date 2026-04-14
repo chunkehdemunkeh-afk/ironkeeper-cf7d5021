@@ -50,7 +50,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       (async () => {
         try {
-          const networkRes = await fetch(req, { cache: "no-store" });
+          // Note: Safari throws a TypeError if you try to pass { cache: "no-store" }
+          // when req.mode === "navigate". Fetching normally will still get the fresh
+          // HTML because the browser doesn't heavily cache index.html.
+          const networkRes = await fetch(req);
           if (!networkRes.ok) throw new Error("network-error");
 
           // Read the fresh HTML once; we'll build two Response objects from it
