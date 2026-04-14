@@ -1,5 +1,5 @@
 import { fetchWorkoutHistory, fetchActivityLogs } from "@/lib/cloud-data";
-import { Flame, Target, Timer } from "lucide-react";
+import { Flame, Target, Dumbbell } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
