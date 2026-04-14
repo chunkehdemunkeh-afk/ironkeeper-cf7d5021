@@ -22,7 +22,7 @@ const SPLIT_META: Record<string, { intensity: string; intensityColor: string; fo
   custom:      { intensity: "Varies by day",                 intensityColor: "text-muted-foreground", focus: "Your Choice" },
 };
 
-const APP_VERSION = "1.0.24";
+const APP_VERSION = "1.0.25";
 
 export default function Profile() {
   const { user, profile, signOut } = useAuth();
