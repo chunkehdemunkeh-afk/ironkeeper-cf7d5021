@@ -35,12 +35,12 @@ export default defineConfig(({ mode }) => {
       mode === "development" && componentTagger(),
       mode === "production" && autoBumpVersion(buildVersion),
       VitePWA({
-        registerType: "prompt",
+        registerType: "autoUpdate",
         includeAssets: ["favicon.ico"],
         workbox: {
           navigateFallbackDenylist: [/^\/~oauth/],
           clientsClaim: true,
-          skipWaiting: false,
+          skipWaiting: true,   // new SW takes control immediately — no waiting for tabs to close
         },
         manifest: {
           name: "Iron Keeper",
