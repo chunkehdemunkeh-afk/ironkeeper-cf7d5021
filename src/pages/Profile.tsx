@@ -22,7 +22,10 @@ const SPLIT_META: Record<string, { intensity: string; intensityColor: string; fo
   custom:      { intensity: "Varies by day",                 intensityColor: "text-muted-foreground", focus: "Your Choice" },
 };
 
-const APP_VERSION = "1.0.25";
+import { changelog } from "@/lib/changelog";
+
+/** The current version is always dynamically read from the top of the changelog */
+const APP_VERSION = changelog[0]?.version || "1.0.0";
 
 export default function Profile() {
   const { user, profile, signOut } = useAuth();
