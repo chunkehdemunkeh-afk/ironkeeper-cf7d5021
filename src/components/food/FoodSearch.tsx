@@ -189,10 +189,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
     setSaving(true);
     const qty = Math.max(0.1, parseFloat(servings) || 1);
     const multiplier = (servingGrams / 100) * qty;
-    const { error } = await supabase.from("food_logs").insert({
-      user_id: user.id,
-      date,
-      meal_type: mealType,
+    const foodData = {
       food_name: selected.name,
       brand: selected.brand || null,
       serving_size: `${servingGrams}g`,
@@ -202,18 +199,34 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
       carbs_g: Math.round(baseCarb * multiplier * 10) / 10,
       fat_g: Math.round(baseFat * multiplier * 10) / 10,
       barcode: selected.barcode || null,
-    });
+    };
+
+    let error;
+    if (editingLog) {
+      // Update existing log
+      ({ error } = await supabase.from("food_logs").update(foodData).eq("id", editingLog.id));
+    } else {
+      // Insert new log
+      ({ error } = await supabase.from("food_logs").insert({
+        user_id: user.id,
+        date,
+        meal_type: mealType,
+        ...foodData,
+      }));
+    }
     setSaving(false);
     if (error) {
-      toast.error("Failed to log food");
+      toast.error(editingLog ? "Failed to update food" : "Failed to log food");
       return;
     }
-    toast.success(`${selected.name} logged to ${mealType}`);
+    toast.success(editingLog ? `${selected.name} updated` : `${selected.name} logged to ${mealType}`);
     setSelected(null);
-    setQuery("");
-    setResults([]);
     onLogged();
-    onClose();
+    if (editingLog) {
+      // Close after editing
+      onClose();
+    }
+    // Stay on search for new additions (don't close)
   };
 
   const quickAdd = async (food: SavedFood) => {
