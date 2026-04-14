@@ -16,6 +16,7 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-14",
     title: "Updates & Fixes",
     changes: [
+      "Fix iOS PWA update freeze: sw-build timestamp, visibilitychange polling, caching fixes",
       "Food tracker improvements",
       "Barcode scanner improvements",
       "Profile page updates",
