@@ -378,6 +378,17 @@ export default function FoodTracker() {
           waterGoalMl={waterGoalMl}
         />
       )}
+
+      {/* Copy meal sheet */}
+      {copyMeal && (
+        <CopyMeal
+          open={!!copyMeal}
+          onClose={() => setCopyMeal(null)}
+          targetDate={date}
+          targetMeal={copyMeal}
+          onCopied={fetchData}
+        />
+      )}
     </div>
   );
 }
