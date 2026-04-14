@@ -157,7 +157,7 @@ export default function HomeWeightTracker() {
             </button>
           )}
           <button
-            onClick={() => navigate("/body-measurements")}
+            onClick={() => navigate("/body")}
             className="text-muted-foreground hover:text-foreground"
           >
             <ChevronRight className="h-4 w-4" />
