@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { format, addDays, subDays } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, Settings, Trash2, Flame, Beef, Wheat, Droplets, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Settings, Trash2, Flame, Beef, Wheat, Droplets, CheckCircle2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import NutritionSettings from "@/components/food/NutritionSettings";
 import WaterIntake from "@/components/food/WaterIntake";
 import CompleteDaySummary from "@/components/food/CompleteDaySummary";
 import WeeklyNutritionChart from "@/components/food/WeeklyNutritionChart";
+import CopyMeal from "@/components/food/CopyMeal";
 import { toast } from "sonner";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
