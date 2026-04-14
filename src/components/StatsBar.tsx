@@ -132,7 +132,7 @@ export default function StatsBar() {
       color: thisWeek >= weekGoal ? "text-success" : "text-foreground",
     },
     {
-      icon: Weight,
+      icon: Dumbbell,
       value: formatWeight(totalKg),
       label: "Total Lifted",
       color: "text-foreground",
