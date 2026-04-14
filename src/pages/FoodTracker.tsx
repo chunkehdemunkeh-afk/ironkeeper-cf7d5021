@@ -318,8 +318,13 @@ export default function FoodTracker() {
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-medium truncate">{log.food_name}</p>
                           <p className="text-[10px] text-muted-foreground">
-                            {log.serving_qty}× {log.serving_size || "100g"} · {Math.round(log.protein_g)}p · {Math.round(log.carbs_g)}c · {Math.round(log.fat_g)}f
+                            {log.serving_qty} × {log.serving_size || "100g"}
                           </p>
+                          <div className="flex gap-2 mt-0.5">
+                            <span className="text-[10px] text-blue-400">{Math.round(log.protein_g)}g P</span>
+                            <span className="text-[10px] text-amber-400">{Math.round(log.carbs_g)}g C</span>
+                            <span className="text-[10px] text-rose-400">{Math.round(log.fat_g)}g F</span>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-xs font-semibold text-primary">{Math.round(log.calories)}</span>
