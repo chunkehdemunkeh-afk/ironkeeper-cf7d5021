@@ -59,11 +59,15 @@ export default function HomeDailySummary() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
-      className="glass-card rounded-xl p-4"
+      className="glass-card rounded-xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
+      onClick={() => navigate("/nutrition")}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-        Today's Nutrition
-      </p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          Today's Nutrition
+        </p>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </div>
 
       {/* Calories + Water row */}
       <div className="grid grid-cols-2 gap-3 mb-3">
