@@ -37,23 +37,38 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
     processedRef.current = false;
 
     try {
+      const cameras = await Html5Qrcode.getCameras().catch(() => []);
+      const preferredRearCamera =
+        cameras.find((camera) => {
+          const label = camera.label.toLowerCase();
+          return (
+            (label.includes("back") || label.includes("rear")) &&
+            !label.includes("front") &&
+            !label.includes("ultra") &&
+            !label.includes("0.5") &&
+            !label.includes("macro")
+          );
+        }) ??
+        cameras.find((camera) => {
+          const label = camera.label.toLowerCase();
+          return (label.includes("back") || label.includes("rear")) && !label.includes("front");
+        });
+
       const scanner = new Html5Qrcode("barcode-reader");
       scannerRef.current = scanner;
       setScanning(true);
 
       await scanner.start(
-        { facingMode: "environment" },
+        preferredRearCamera?.id ?? { facingMode: { ideal: "environment" } },
         {
-          fps: 30,
+          fps: 24,
           qrbox: { width: 280, height: 140 },
           aspectRatio: 1.5,
+          disableFlip: true,
           videoConstraints: {
-            facingMode: "environment",
-            advanced: [
-              { focusMode: "continuous" } as any,
-              { width: { ideal: 1920 } } as any,
-              { height: { ideal: 1080 } } as any,
-            ],
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
           },
         },
         async (decodedText) => {
@@ -75,6 +90,14 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
         },
         () => {} // ignore scan failures
       );
+
+      try {
+        await scanner.applyVideoConstraints({
+          advanced: [{ focusMode: "continuous" } as any],
+        });
+      } catch {
+        // Some iPhone browsers ignore unsupported autofocus constraints
+      }
     } catch (err) {
       setScanning(false);
       if (err instanceof Error && err.message.includes("Permission")) {
