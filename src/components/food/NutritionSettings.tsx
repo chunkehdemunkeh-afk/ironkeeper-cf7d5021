@@ -144,10 +144,22 @@ export default function NutritionSettings({ open, onClose, onSaved }: Props) {
               <Label className="text-sm font-semibold">Daily Calories (kcal)</Label>
               <Input
                 type="number"
+                inputMode="numeric"
                 min={800}
                 max={10000}
-                value={calories}
-                onChange={(e) => setCalories(Math.max(800, Math.min(10000, parseInt(e.target.value) || 800)))}
+                value={calories || ""}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "") {
+                    setCalories(0);
+                    return;
+                  }
+                  const parsed = parseInt(raw);
+                  if (!isNaN(parsed)) setCalories(Math.min(10000, parsed));
+                }}
+                onBlur={() => {
+                  if (calories < 800) setCalories(800);
+                }}
                 className="mt-2 h-12 text-lg font-bold text-center"
               />
             </div>
