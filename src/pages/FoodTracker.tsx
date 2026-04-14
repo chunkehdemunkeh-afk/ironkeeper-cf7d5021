@@ -27,6 +27,13 @@ interface FoodLog {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  barcode?: string | null;
+}
+
+interface EditingLog {
+  id: string;
+  mealType: MealType;
+  log: FoodLog;
 }
 
 interface Goals {
