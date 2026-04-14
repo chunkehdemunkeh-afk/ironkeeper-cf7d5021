@@ -1,0 +1,46 @@
+name: Auto-update Changelog
+
+on:
+  push:
+    branches: [main]
+
+# Prevents the action from triggering itself when it commits the changelog
+concurrency:
+  group: changelog
+  cancel-in-progress: true
+
+jobs:
+  changelog:
+    # Skip if this was our own auto-commit (prevents infinite loop)
+    if: "!startsWith(github.event.head_commit.message, 'Auto-update changelog')"
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write   # needed to push the updated changelog.ts back
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # we need the full git log
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate changelog entry
+        run: node scripts/generate-changelog.mjs
+
+      - name: Commit & push if changelog changed
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name  "github-actions[bot]"
+          if ! git diff --quiet src/lib/changelog.ts; then
+            git add src/lib/changelog.ts
+            git commit -m "Auto-update changelog"
+            git push
+          else
+            echo "No changelog changes — skipping commit"
+          fi
