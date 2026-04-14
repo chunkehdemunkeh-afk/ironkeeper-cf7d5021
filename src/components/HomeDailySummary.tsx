@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Flame, Beef, Wheat, Droplets, Droplet } from "lucide-react";
+import { Flame, Beef, Wheat, Droplets, Droplet, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 export default function HomeDailySummary() {
   const { user } = useAuth();
