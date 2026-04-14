@@ -101,21 +101,11 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
         cameraId = best?.id ?? { facingMode: { ideal: "environment" } };
       }
 
-      // ── Video constraints ───────────────────────────────────────────────────
-      // iOS autofocus works more reliably at 1280×720 than 1920×1080.
-      // The lower resolution reduces camera mode switching that can interfere
-      // with focus. Android keeps high res for better barcode detection.
-      const videoConstraints: Record<string, unknown> = isIOS
-        ? {
-            facingMode: { exact: "environment" },
-            width:  { ideal: 1280 },
-            height: { ideal: 720  },
-          }
-        : {
-            facingMode: { ideal: "environment" },
-            width:  { ideal: 1920 },
-            height: { ideal: 1080 },
-          };
+      const videoConstraints: Record<string, unknown> = {
+        facingMode: isIOS ? { exact: "environment" } : { ideal: "environment" },
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 },
+      };
 
       const scanner = new Html5Qrcode("barcode-reader");
       scannerRef.current = scanner;
@@ -124,8 +114,8 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
       await scanner.start(
         cameraId,
         {
-          fps: 24,
-          qrbox: { width: 280, height: 140 },
+          fps: 10, // 10 is fast enough and uses less CPU
+          qrbox: { width: 300, height: 150 }, // slightly larger box
           aspectRatio: 1.5,
           disableFlip: true,
           videoConstraints,
@@ -154,31 +144,32 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
           ? videoEl.srcObject.getVideoTracks()[0]
           : null;
 
-        if (track) {
-          trackRef.current = track;
-          const capabilities = track.getCapabilities() as any;
+        if (isIOS && videoEl) {
+          // iOS: Fix the camera focal distance issue by applying a fixed 1.5x visual
+          // scale. This forces the user to comfortably hold the phone ~25-30cm away
+          // (which is where iPhones can achieve sharp optical focus). Since we use
+          // 1920x1080 above, the scanner has plenty of pixels to read the smaller barcode.
+          setTimeout(() => {
+            videoEl.style.transform = "scale(1.5)";
+            videoEl.style.transformOrigin = "center center";
+          }, 300);
+        }
 
-          if (isIOS) {
-            // iOS doesn't support applyConstraints for focusMode or zoom.
-            // Instead, apply a 1.5× software zoom after a short delay so the
-            // video element is fully rendered. This lets users aim from ≈20-30 cm
-            // where the iOS camera autofocuses correctly on barcodes.
-            setTimeout(() => applySwZoom(1.5), 400);
-          } else {
-            // Android: request continuous autofocus if supported
-            if (capabilities?.focusMode?.includes("continuous")) {
-              await track.applyConstraints({
-                advanced: [{ focusMode: "continuous" } as any],
-              });
-            }
-            // Android: expose hardware zoom slider if the camera supports it
-            if (capabilities?.zoom) {
-              const min = capabilities.zoom.min ?? 1;
-              const max = Math.min(capabilities.zoom.max ?? 1, 8);
-              if (max > min) {
-                setHwZoomRange({ min, max });
-                setHwZoom(min);
-              }
+        if (track && !isIOS) {
+          const capabilities = track.getCapabilities() as any;
+          // Android: request continuous autofocus if supported
+          if (capabilities?.focusMode?.includes("continuous")) {
+            await track.applyConstraints({
+              advanced: [{ focusMode: "continuous" } as any],
+            });
+          }
+          // Android: expose hardware zoom slider if the camera supports it
+          if (capabilities?.zoom) {
+            const min = capabilities.zoom.min ?? 1;
+            const max = Math.min(capabilities.zoom.max ?? 1, 8);
+            if (max > min) {
+              setHwZoomRange({ min, max });
+              setHwZoom(min);
             }
           }
         }
@@ -204,12 +195,10 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
     );
   }
 
-  // Derived: should we show the zoom control?
-  const showZoom = scanning && (isIOS || !!hwZoomRange);
-  const zoomMin  = isIOS ? 1   : (hwZoomRange?.min ?? 1);
-  const zoomMax  = isIOS ? 4   : (hwZoomRange?.max ?? 4);
-  const zoomVal  = isIOS ? swZoom : hwZoom;
-  const onZoom   = (v: number) => isIOS ? applySwZoom(v) : applyHwZoom(v);
+  // Derived: should we show the zoom control? (Only on Android if hardware zoom exists)
+  const showZoom = scanning && !isIOS && !!hwZoomRange;
+  const zoomMin  = hwZoomRange?.min ?? 1;
+  const zoomMax  = hwZoomRange?.max ?? 4;
 
   return (
     <div
@@ -238,9 +227,7 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
         </div>
       )}
 
-      {/* ── Camera viewfinder + zoom overlay ───────────────────────────────── */}
-      {/* The zoom slider lives INSIDE the viewfinder so it is never cut off  */}
-      {/* by the iOS home indicator regardless of safe-area support.           */}
+      {/* ── Camera viewfinder + zoom overlay (Android only) ────────────────── */}
       <div className="relative w-full max-w-[320px]">
         <div
           id="barcode-reader"
@@ -250,20 +237,20 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
 
         {showZoom && (
           <div className="absolute bottom-0 left-0 right-0 rounded-b-xl overflow-hidden
-                          bg-black/50 backdrop-blur-sm px-3 pt-2 pb-3">
+                          bg-black/50 backdrop-blur-sm px-3 pt-2 pb-3 z-10">
             <div className="flex items-center gap-2">
               <ZoomOut className="h-3.5 w-3.5 text-white/80 shrink-0" />
               <Slider
                 min={zoomMin}
                 max={zoomMax}
                 step={0.1}
-                value={[zoomVal]}
-                onValueChange={([v]) => onZoom(v)}
+                value={[hwZoom]}
+                onValueChange={([v]) => applyHwZoom(v)}
                 className="flex-1"
               />
               <ZoomIn className="h-3.5 w-3.5 text-white/80 shrink-0" />
               <span className="text-xs text-white/80 tabular-nums w-8 text-right">
-                {zoomVal.toFixed(1)}×
+                {hwZoom.toFixed(1)}×
               </span>
             </div>
           </div>
@@ -272,13 +259,14 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
 
       {/* ── Scanning controls (cancel button + hint) ────────────────────────── */}
       {scanning && (
-        <div className="w-full max-w-[320px] text-center space-y-2">
-          <p className="text-xs text-muted-foreground">
-            {isIOS
-              ? "Hold 20–30 cm away · use slider to zoom in"
-              : "Point at a barcode on food packaging"}
+        <div className="w-full max-w-[320px] text-center space-y-2 mt-2">
+          <p className="text-xs font-medium text-foreground">
+            {isIOS ? "Hold phone 20–30 cm away from barcode" : "Point at a barcode"}
           </p>
-          <Button variant="outline" size="sm" onClick={stopScanner}>
+          <p className="text-[11px] text-muted-foreground max-w-[260px] mx-auto">
+            {isIOS && "The camera will look slightly zoomed in to help you aim from the correct focal distance."}
+          </p>
+          <Button variant="outline" size="sm" onClick={stopScanner} className="mt-2">
             <X className="h-3.5 w-3.5 mr-1" /> Cancel
           </Button>
         </div>
