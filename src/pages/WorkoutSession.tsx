@@ -999,7 +999,7 @@ export default function WorkoutSession() {
                                       2 Handed
                                     </label>
                                   )}
-                                  {(displayName.toLowerCase().includes("cable") || displayName.toLowerCase().includes("push down") || displayName.toLowerCase().includes("pallof press")) && (
+                                  {["cable", "push down", "pushdown", "pull down", "pulldown", "face pull", "facepull", "pallof", "rope", "v bar", "lat pull", "straight-arm", "seated row", "machine row", "crossover", "machine fly", "pec deck"].some(kw => displayName.toLowerCase().includes(kw)) && (
                                     <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
                                       Light
                                       <Switch
