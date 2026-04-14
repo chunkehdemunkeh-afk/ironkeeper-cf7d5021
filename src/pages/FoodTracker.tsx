@@ -70,7 +70,7 @@ export default function FoodTracker() {
     const [logsRes, goalsRes, waterRes] = await Promise.all([
       supabase
         .from("food_logs")
-        .select("id, meal_type, food_name, brand, serving_qty, serving_size, calories, protein_g, carbs_g, fat_g")
+        .select("id, meal_type, food_name, brand, serving_qty, serving_size, calories, protein_g, carbs_g, fat_g, barcode")
         .eq("user_id", user.id)
         .eq("date", date)
         .order("created_at"),
