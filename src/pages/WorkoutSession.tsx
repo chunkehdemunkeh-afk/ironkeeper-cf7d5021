@@ -176,6 +176,7 @@ export default function WorkoutSession() {
   const [started, setStarted] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [twoHandedExercises, setTwoHandedExercises] = useState<Set<string>>(new Set());
+  const [heavyStackExercises, setHeavyStackExercises] = useState<Set<string>>(new Set());
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
   const [exerciseOrder, setExerciseOrder] = useState<string[]>([]);
   const [setLogs, setSetLogs] = useState<Record<string, SetLog[]>>({});
@@ -193,8 +194,11 @@ export default function WorkoutSession() {
   // Get the effective exercise ID for data lookups (substitute ID if swapped, otherwise original)
   const getEffectiveExId = useCallback((originalId: string) => {
     const base = exerciseOverrides[originalId]?.substituteId || originalId;
-    return twoHandedExercises.has(originalId) ? `${base}-2h` : base;
-  }, [exerciseOverrides, twoHandedExercises]);
+    let effective = base;
+    if (twoHandedExercises.has(originalId)) effective += "-2h";
+    if (heavyStackExercises.has(originalId)) effective += "-heavy";
+    return effective;
+  }, [exerciseOverrides, twoHandedExercises, heavyStackExercises]);
   const [restTimerKey, setRestTimerKey] = useState(0);
   const [restDuration, setRestDuration] = useState(workout?.id === "power" ? 45 : 60);
   const [videoExercise, setVideoExercise] = useState<{ name: string; id: string } | null>(null);
@@ -217,6 +221,7 @@ export default function WorkoutSession() {
       addedAccessories,
       bodyweightExercises: Array.from(bodyweightExercises),
       twoHandedExercises: Array.from(twoHandedExercises),
+      heavyStackExercises: Array.from(heavyStackExercises),
       elapsed,
       expandedExercise,
       weightUpSuggestions,
@@ -228,7 +233,7 @@ export default function WorkoutSession() {
     } catch (e) {
       console.warn("Failed to auto-save workout:", e);
     }
-  }, [autoSaveKey, started, finished, showFeedback, setLogs, exerciseNotes, exerciseOrder, exerciseOverrides, addedAccessories, bodyweightExercises, twoHandedExercises, elapsed, expandedExercise, weightUpSuggestions, weightDownSuggestions]);
+  }, [autoSaveKey, started, finished, showFeedback, setLogs, exerciseNotes, exerciseOrder, exerciseOverrides, addedAccessories, bodyweightExercises, twoHandedExercises, heavyStackExercises, elapsed, expandedExercise, weightUpSuggestions, weightDownSuggestions]);
 
   // Save on visibility change (user switching apps / leaving)
   useEffect(() => {
@@ -291,6 +296,7 @@ export default function WorkoutSession() {
         setAddedAccessories(parsed.addedAccessories || []);
         setBodyweightExercises(new Set(parsed.bodyweightExercises || []));
         setTwoHandedExercises(new Set(parsed.twoHandedExercises || []));
+        setHeavyStackExercises(new Set(parsed.heavyStackExercises || []));
         setElapsed(parsed.elapsed || 0);
         setExpandedExercise(parsed.expandedExercise || null);
         setWeightUpSuggestions(parsed.weightUpSuggestions || {});
@@ -991,6 +997,22 @@ export default function WorkoutSession() {
                                         className="h-4 w-7 data-[state=checked]:bg-primary [&>span]:h-3 [&>span]:w-3"
                                       />
                                       2 Handed
+                                    </label>
+                                  )}
+                                  {(displayName.toLowerCase().includes("cable") || displayName.toLowerCase().includes("push down") || displayName.toLowerCase().includes("pallof press")) && (
+                                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+                                      Light
+                                      <Switch
+                                        checked={heavyStackExercises.has(ex.id)}
+                                        onCheckedChange={() => setHeavyStackExercises(prev => {
+                                          const next = new Set(prev);
+                                          if (next.has(ex.id)) next.delete(ex.id);
+                                          else next.add(ex.id);
+                                          return next;
+                                        })}
+                                        className="h-4 w-7 data-[state=checked]:bg-primary [&>span]:h-3 [&>span]:w-3"
+                                      />
+                                      Heavy
                                     </label>
                                   )}
                                 </div>
