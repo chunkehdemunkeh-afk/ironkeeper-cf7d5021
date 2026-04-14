@@ -245,6 +245,9 @@ export default function FoodTracker() {
         </motion.div>
       )}
 
+      {/* Weekly nutrition chart */}
+      <WeeklyNutritionChart goals={goals} />
+
       {/* Water intake */}
       <div className="mt-4">
         <WaterIntake date={date} />
