@@ -17,45 +17,27 @@ const isPreviewHost =
   window.location.hostname.includes("id-preview--") ||
   window.location.hostname.includes("lovableproject.com");
 
-const confirmUpdate = () =>
-  window.confirm("A new version of Iron Keeper is available. Update now?");
-
 if (isPreviewHost || isInIframe) {
   navigator.serviceWorker?.getRegistrations().then((registrations) => {
     registrations.forEach((registration) => registration.unregister());
   });
 } else {
-  let promptingForUpdate = false;
   let updateSW: ReturnType<typeof registerSW> | null = null;
+  let updateInProgress = false;
 
   const applyUpdate = async () => {
+    if (updateInProgress) return;
+    updateInProgress = true;
+
     try {
+      await navigator.serviceWorker?.getRegistration()?.then((registration) => registration?.update());
       await updateSW?.(true);
+    } catch {
+      // ignore and fall back to reload
     } finally {
       window.location.reload();
     }
   };
-
-  const maybePromptForUpdate = () => {
-    if (promptingForUpdate) return;
-    promptingForUpdate = true;
-
-    if (confirmUpdate()) {
-      void applyUpdate();
-      return;
-    }
-
-    promptingForUpdate = false;
-  };
-
-  updateSW = registerSW({
-    onNeedRefresh() {
-      maybePromptForUpdate();
-    },
-    onOfflineReady() {
-      console.log("Iron Keeper is ready to work offline.");
-    },
-  });
 
   const checkPublishedVersion = async () => {
     try {
@@ -67,12 +49,21 @@ if (isPreviewHost || isInIframe) {
 
       const data = (await response.json()) as { version?: string };
       if (data.version && data.version !== __APP_VERSION__) {
-        maybePromptForUpdate();
+        await applyUpdate();
       }
     } catch {
       // ignore transient network issues
     }
   };
+
+  updateSW = registerSW({
+    onNeedRefresh() {
+      void applyUpdate();
+    },
+    onOfflineReady() {
+      console.log("Iron Keeper is ready to work offline.");
+    },
+  });
 
   void checkPublishedVersion();
   setInterval(() => {

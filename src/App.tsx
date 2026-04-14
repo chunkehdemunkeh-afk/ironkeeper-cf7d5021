@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -100,7 +100,6 @@ function RoleBasedHome() {
     );
   }
   if (isCoach) return <Navigate to="/coach" replace />;
-  // First-time users → onboarding
   if (user && !isOnboardingComplete(user.id)) return <Navigate to="/onboarding" replace />;
   return <Index />;
 }
@@ -133,25 +132,6 @@ const AppRoutes = () => {
 const App = () => {
   const [splashDone, setSplashDone] = useState(false);
   const handleSplashComplete = useCallback(() => setSplashDone(true), []);
-
-  useEffect(() => {
-    const checkForUpdate = async () => {
-      try {
-        const res = await fetch(`/version.json?t=${Date.now()}`);
-        const { version } = await res.json();
-        const installed = localStorage.getItem('ik-version');
-        if (installed && installed !== version) {
-          localStorage.setItem('ik-version', version);
-          window.location.reload();
-        } else {
-          localStorage.setItem('ik-version', version);
-        }
-      } catch (e) {
-        // Offline or version.json missing — skip
-      }
-    };
-    checkForUpdate();
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
