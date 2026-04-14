@@ -47,7 +47,7 @@ interface Props {
   editingLog?: EditingLog | null;
 }
 
-export default function FoodSearch({ open, onClose, mealType, date, onLogged }: Props) {
+export default function FoodSearch({ open, onClose, mealType, date, onLogged, editingLog }: Props) {
   const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodItem[]>([]);
