@@ -145,20 +145,32 @@ export default function FoodTracker() {
         </div>
       </div>
 
-      {/* Date nav */}
-      <div className="flex items-center justify-center gap-4 px-4 py-2">
-        <button onClick={() => setDate(format(subDays(new Date(date), 1), "yyyy-MM-dd"))}>
-          <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-        </button>
-        <span className="text-sm font-medium min-w-[120px] text-center">
-          {date === format(new Date(), "yyyy-MM-dd")
-            ? "Today"
-            : format(new Date(date), "EEE, MMM d")}
-        </span>
-        <button onClick={() => setDate(format(addDays(new Date(date), 1), "yyyy-MM-dd"))}>
-          <ChevronRight className="h-5 w-5 text-muted-foreground" />
-        </button>
-      </div>
+      {/* Date nav — up to 7 days back, not beyond today */}
+      {(() => {
+        const todayStr = format(new Date(), "yyyy-MM-dd");
+        const minDate = format(subDays(new Date(), 7), "yyyy-MM-dd");
+        const isToday = date === todayStr;
+        const canGoBack = date > minDate;
+        return (
+          <div className="flex items-center justify-center gap-4 px-4 py-2">
+            <button
+              onClick={() => canGoBack && setDate(format(subDays(new Date(date), 1), "yyyy-MM-dd"))}
+              className={canGoBack ? "" : "opacity-30 pointer-events-none"}
+            >
+              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+            </button>
+            <span className="text-sm font-medium min-w-[120px] text-center">
+              {isToday ? "Today" : format(new Date(date + "T12:00:00"), "EEE, MMM d")}
+            </span>
+            <button
+              onClick={() => !isToday && setDate(format(addDays(new Date(date), 1), "yyyy-MM-dd"))}
+              className={isToday ? "opacity-30 pointer-events-none" : ""}
+            >
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Summary */}
       {goals && (
