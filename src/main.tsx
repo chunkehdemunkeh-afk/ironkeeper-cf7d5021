@@ -29,8 +29,8 @@ if (isPreviewHost || isInIframe) {
     if (updateInProgress) return;
     updateInProgress = true;
 
-    // Show the updating banner
-    window.dispatchEvent(new CustomEvent("ik-updating"));
+    // Flag so the app shows "What's New" after reload
+    try { localStorage.setItem("ik-just-updated", "1"); } catch {}
 
     // Small delay so user sees the banner
     await new Promise((r) => setTimeout(r, 1200));
