@@ -22,6 +22,8 @@ const SPLIT_META: Record<string, { intensity: string; intensityColor: string; fo
   custom:      { intensity: "Varies by day",                 intensityColor: "text-muted-foreground", focus: "Your Choice" },
 };
 
+const APP_VERSION = "1.0.24";
+
 export default function Profile() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -205,6 +207,11 @@ export default function Profile() {
           <LogOut className="h-4 w-4" />
           Sign Out
         </motion.button>
+
+        {/* Version */}
+        <p className="text-center text-[11px] text-muted-foreground/50 pt-2">
+          v{APP_VERSION}
+        </p>
       </div>
     </div>
   );
