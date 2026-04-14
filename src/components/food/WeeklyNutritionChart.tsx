@@ -63,10 +63,12 @@ export default function WeeklyNutritionChart({ goals }: { goals: Goals | null })
 
   if (loading || data.every((d) => d.calories === 0)) return null;
 
-  const avgCals = Math.round(data.reduce((s, d) => s + d.calories, 0) / 7);
-  const avgProtein = Math.round(data.reduce((s, d) => s + d.protein, 0) / 7);
-  const avgCarbs = Math.round(data.reduce((s, d) => s + d.carbs, 0) / 7);
-  const avgFat = Math.round(data.reduce((s, d) => s + d.fat, 0) / 7);
+  const trackedDays = data.filter((d) => d.calories > 0);
+  const trackedCount = trackedDays.length || 1;
+  const avgCals = Math.round(trackedDays.reduce((s, d) => s + d.calories, 0) / trackedCount);
+  const avgProtein = Math.round(trackedDays.reduce((s, d) => s + d.protein, 0) / trackedCount);
+  const avgCarbs = Math.round(trackedDays.reduce((s, d) => s + d.carbs, 0) / trackedCount);
+  const avgFat = Math.round(trackedDays.reduce((s, d) => s + d.fat, 0) / trackedCount);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
