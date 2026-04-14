@@ -1,5 +1,5 @@
 import { fetchWorkoutHistory, fetchActivityLogs } from "@/lib/cloud-data";
-import { Flame, Target, Timer } from "lucide-react";
+import { Flame, Target, Dumbbell } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -98,10 +98,25 @@ export default function StatsBar() {
 
   const streak = computeDailyStreak();
 
-  // ── Total training time ───────────────────────────────────────────────────
-  const totalMinutes =
-    history.reduce((s, w) => s + (w.duration || 0), 0) +
-    activities.reduce((s, a) => s + (a.duration || 0), 0);
+  // ── Total weight lifted ──────────────────────────────────────────────────
+  const { data: totalWeightData } = useQuery({
+    queryKey: ["total-weight-lifted", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("workout_sets")
+        .select("weight, reps")
+        .eq("user_id", user!.id);
+      return (data || []).reduce((sum, s) => sum + (s.weight || 0) * (s.reps || 0), 0);
+    },
+    enabled: !!user,
+  });
+
+  const totalKg = totalWeightData ?? 0;
+  const formatWeight = (kg: number) => {
+    if (kg >= 1000000) return `${(kg / 1000000).toFixed(1)}M kg`;
+    if (kg >= 1000) return `${(kg / 1000).toFixed(1)}K kg`;
+    return `${Math.round(kg)} kg`;
+  };
 
   const items = [
     {
@@ -117,9 +132,9 @@ export default function StatsBar() {
       color: thisWeek >= weekGoal ? "text-success" : "text-foreground",
     },
     {
-      icon: Timer,
-      value: `${totalMinutes}m`,
-      label: "Total Time",
+      icon: Dumbbell,
+      value: formatWeight(totalKg),
+      label: "Total Lifted",
       color: "text-foreground",
     },
   ];
