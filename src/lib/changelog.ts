@@ -20,6 +20,7 @@ export const changelog: ChangelogEntry[] = [
       "Fix iOS PWA update freeze: sw-build timestamp, visibilitychange polling, caching fixes",
       "Food tracker improvements",
       "Barcode scanner improvements",
+      "Workout session improvements",
       "Home screen improvements",
       "App reliability & performance",
     ],
