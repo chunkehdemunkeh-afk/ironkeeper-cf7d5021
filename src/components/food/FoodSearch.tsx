@@ -124,6 +124,32 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
     })();
   }, [open, user]);
 
+  // Pre-populate when editing an existing log
+  useEffect(() => {
+    if (!open || !editingLog) return;
+    const food: FoodItem = {
+      name: editingLog.food_name,
+      brand: editingLog.brand || undefined,
+      barcode: editingLog.barcode || undefined,
+      servingSize: editingLog.serving_size || "100g",
+      calories: editingLog.calories,
+      protein: editingLog.protein_g,
+      carbs: editingLog.carbs_g,
+      fat: editingLog.fat_g,
+    };
+    // Reverse-calculate per-100g values from stored totals
+    const storedGrams = parseInt(editingLog.serving_size || "100") || 100;
+    const storedQty = editingLog.serving_qty || 1;
+    const storedMultiplier = (storedGrams / 100) * storedQty;
+    setSelected(food);
+    setEditCalories(String(Math.round((editingLog.calories / storedMultiplier) * 10) / 10));
+    setEditProtein(String(Math.round((editingLog.protein_g / storedMultiplier) * 10) / 10));
+    setEditCarbs(String(Math.round((editingLog.carbs_g / storedMultiplier) * 10) / 10));
+    setEditFat(String(Math.round((editingLog.fat_g / storedMultiplier) * 10) / 10));
+    setServingGrams(storedGrams);
+    setServings(String(storedQty));
+  }, [open, editingLog]);
+
   const doSearch = useCallback(async (searchQuery?: string) => {
     const q = searchQuery ?? query;
     if (!q.trim()) return;
