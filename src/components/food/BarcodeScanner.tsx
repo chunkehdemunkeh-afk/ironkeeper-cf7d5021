@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Loader2, Camera, X, ZoomIn, ZoomOut } from "lucide-react";
@@ -101,22 +101,36 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
         cameraId = best?.id ?? { facingMode: { ideal: "environment" } };
       }
 
-      const videoConstraints: Record<string, unknown> = {
-        facingMode: isIOS ? { exact: "environment" } : { ideal: "environment" },
-        width:  { ideal: 1920 },
-        height: { ideal: 1080 },
-      };
+      // On iOS, passing explicit width/height can cause Safari to return a 
+      // rotated/distorted feed that completely breaks 1D barcode scanning.
+      const videoConstraints: Record<string, unknown> = isIOS
+        ? { facingMode: { exact: "environment" } }
+        : {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          };
 
-      const scanner = new Html5Qrcode("barcode-reader");
+      const scanner = new Html5Qrcode("barcode-reader", {
+        // Restricting formats dramatically improves 1D scanning reliability.
+        // Food items exclusively use EAN or UPC retail formats.
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+        ]
+      });
       scannerRef.current = scanner;
       setScanning(true);
 
       await scanner.start(
         cameraId,
         {
-          fps: 10, // 10 is fast enough and uses less CPU
-          qrbox: { width: 300, height: 150 }, // slightly larger box
-          aspectRatio: 1.5,
+          fps: 10,
+          // A larger box gives the scanner more margin for error if the user isn't perfectly centered
+          qrbox: { width: 320, height: 200 }, 
+          aspectRatio: isIOS ? undefined : 1.5,
           disableFlip: true,
           videoConstraints,
         },
