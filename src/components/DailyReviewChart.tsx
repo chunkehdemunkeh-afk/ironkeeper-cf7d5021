@@ -56,13 +56,14 @@ export default function DailyReviewChart() {
       if (!user) return {};
       const { data: hData } = await supabase.from("workout_history").select("id, date").eq("user_id", user.id);
       if (!hData || hData.length === 0) return {};
-      const historyToDate = Object.fromEntries(hData.map((h: any) => [h.id, h.date.split("T")[0]]));
+      // Safely transform UTC timestamp into correctly shifted local YYYY-MM-DD
+      const historyToDate = Object.fromEntries(hData.map((h: any) => [h.id, format(new Date(h.date), "yyyy-MM-dd")]));
       
       const historyIds = Object.keys(historyToDate);
       if (historyIds.length === 0) return {};
       
       const vMap: Record<string, number> = {};
-      const chunkSize = 200;
+      const chunkSize = 30; // Max 30 UUIDs per query to prevent 414 URI Too Long errors
       for (let i = 0; i < historyIds.length; i += chunkSize) {
         const chunk = historyIds.slice(i, i + chunkSize);
         const { data: sData } = await supabase.from("workout_sets").select("workout_history_id, reps, weight").in("workout_history_id", chunk);
