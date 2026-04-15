@@ -970,50 +970,80 @@ export default function WorkoutSession() {
                           return (
                             <>
                               {!isTimeBased && (override?.trackWeight ?? ex.trackWeight) !== false && (
-                                <div className="flex items-center gap-3 mb-1">
-                                  <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
-                                    <Switch
-                                      checked={isBW}
-                                      onCheckedChange={() => setBodyweightExercises(prev => {
+                                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                  {/* Bodyweight toggle */}
+                                  <button
+                                    onClick={() => setBodyweightExercises(prev => {
+                                      const next = new Set(prev);
+                                      if (next.has(ex.id)) next.delete(ex.id);
+                                      else next.add(ex.id);
+                                      return next;
+                                    })}
+                                    className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all select-none ${
+                                      isBW
+                                        ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                                        : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
+                                    }`}
+                                  >
+                                    <div className={`h-2 w-2 rounded-full transition-colors ${isBW ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                                    Bodyweight
+                                  </button>
+                                  {/* 2 Handed toggle */}
+                                  {ex.id === "acc-grip1" && (
+                                    <button
+                                      onClick={() => setTwoHandedExercises(prev => {
                                         const next = new Set(prev);
                                         if (next.has(ex.id)) next.delete(ex.id);
                                         else next.add(ex.id);
                                         return next;
                                       })}
-                                      className="h-4 w-7 data-[state=checked]:bg-primary [&>span]:h-3 [&>span]:w-3"
-                                    />
-                                    Bodyweight
-                                  </label>
-                                  {ex.id === "acc-grip1" && (
-                                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
-                                      <Switch
-                                        checked={twoHandedExercises.has(ex.id)}
-                                        onCheckedChange={() => setTwoHandedExercises(prev => {
-                                          const next = new Set(prev);
-                                          if (next.has(ex.id)) next.delete(ex.id);
-                                          else next.add(ex.id);
-                                          return next;
-                                        })}
-                                        className="h-4 w-7 data-[state=checked]:bg-primary [&>span]:h-3 [&>span]:w-3"
-                                      />
+                                      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all select-none ${
+                                        twoHandedExercises.has(ex.id)
+                                          ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                                          : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
+                                      }`}
+                                    >
+                                      <div className={`h-2 w-2 rounded-full transition-colors ${twoHandedExercises.has(ex.id) ? "bg-primary" : "bg-muted-foreground/30"}`} />
                                       2 Handed
-                                    </label>
+                                    </button>
                                   )}
-                                  {["cable", "push down", "pushdown", "pull down", "pulldown", "face pull", "facepull", "pallof", "rope", "v bar", "lat pull", "straight-arm", "seated row", "machine row", "crossover", "machine fly", "pec deck"].some(kw => displayName.toLowerCase().includes(kw)) && (
-                                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
-                                      Light
-                                      <Switch
-                                        checked={heavyStackExercises.has(ex.id)}
-                                        onCheckedChange={() => setHeavyStackExercises(prev => {
+                                  {/* Light/Heavy toggle — standalone cable exercises only (no benches, lat pulldowns, seated rows, machines) */}
+                                  {(() => {
+                                    const dn = displayName.toLowerCase();
+                                    const isCableType = ["cable", "pushdown", "push down", "face pull", "facepull", "pallof", "crossover", "straight-arm", "rope"].some(kw => dn.includes(kw));
+                                    const isBenchOrMachine = ["lat pull", "pulldown", "pull down", "seated row", "machine row", "machine fly", "pec deck", "t-bar", "t bar", "leg"].some(kw => dn.includes(kw));
+                                    return isCableType && !isBenchOrMachine;
+                                  })() && (
+                                    <div className="flex items-center rounded-full bg-muted/50 p-0.5 select-none">
+                                      <button
+                                        onClick={() => heavyStackExercises.has(ex.id) && setHeavyStackExercises(prev => {
                                           const next = new Set(prev);
-                                          if (next.has(ex.id)) next.delete(ex.id);
-                                          else next.add(ex.id);
+                                          next.delete(ex.id);
                                           return next;
                                         })}
-                                        className="h-4 w-7 data-[state=checked]:bg-primary [&>span]:h-3 [&>span]:w-3"
-                                      />
-                                      Heavy
-                                    </label>
+                                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-all ${
+                                          !heavyStackExercises.has(ex.id)
+                                            ? "bg-background text-foreground shadow-sm"
+                                            : "text-muted-foreground"
+                                        }`}
+                                      >
+                                        Light
+                                      </button>
+                                      <button
+                                        onClick={() => !heavyStackExercises.has(ex.id) && setHeavyStackExercises(prev => {
+                                          const next = new Set(prev);
+                                          next.add(ex.id);
+                                          return next;
+                                        })}
+                                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-all ${
+                                          heavyStackExercises.has(ex.id)
+                                            ? "bg-background text-foreground shadow-sm"
+                                            : "text-muted-foreground"
+                                        }`}
+                                      >
+                                        Heavy
+                                      </button>
+                                    </div>
                                   )}
                                 </div>
                               )}
