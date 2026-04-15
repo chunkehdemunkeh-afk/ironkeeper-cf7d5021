@@ -8,7 +8,7 @@ import fs from "fs";
 // This ensures the browser's Service Worker update mechanism triggers.
 const swBuildTimestampPlugin = () => ({
   name: "sw-build-timestamp",
-  apply: "build",
+  apply: "build" as const,
   writeBundle() {
     const swPath = path.resolve(__dirname, "dist/sw.js");
     if (fs.existsSync(swPath)) {
