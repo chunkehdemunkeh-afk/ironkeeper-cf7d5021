@@ -58,15 +58,21 @@ export default function DailyReviewChart() {
       if (!hData || hData.length === 0) return {};
       const historyToDate = Object.fromEntries(hData.map((h: any) => [h.id, h.date]));
       
-      // Fetch in chunks to avoid 1000 limit issue if user has lots of sets
-      const { data: sData } = await supabase.from("workout_sets").select("workout_history_id, reps, weight").eq("user_id", user.id);
-      if (!sData) return {};
+      const historyIds = Object.keys(historyToDate);
+      if (historyIds.length === 0) return {};
       
       const vMap: Record<string, number> = {};
-      sData.forEach((s: any) => {
-        const date = historyToDate[s.workout_history_id];
-        if (date) vMap[date] = (vMap[date] || 0) + (s.reps * s.weight);
-      });
+      const chunkSize = 200;
+      for (let i = 0; i < historyIds.length; i += chunkSize) {
+        const chunk = historyIds.slice(i, i + chunkSize);
+        const { data: sData } = await supabase.from("workout_sets").select("workout_history_id, reps, weight").in("workout_history_id", chunk);
+        if (sData) {
+          sData.forEach((s: any) => {
+            const date = historyToDate[s.workout_history_id];
+            if (date) vMap[date] = (vMap[date] || 0) + (s.reps * s.weight);
+          });
+        }
+      }
       return vMap;
     },
     enabled: !!user
@@ -203,7 +209,9 @@ export default function DailyReviewChart() {
   
   const formatYAxis = (val: number) => {
     if (val === 0) return "";
-    return val >= 1000 && (metric === "calories" || metric === "volume") ? `${(val / 1000).toFixed(1)}k` : val;
+    let formatted = val >= 1000 && (metric === "calories" || metric === "volume") ? `${(val / 1000).toFixed(1)}k` : val.toString();
+    if (metric === "weight" || metric === "volume") formatted += selectedMetricConfig.unit;
+    return formatted;
   };
 
   return (
@@ -249,38 +257,36 @@ export default function DailyReviewChart() {
         ))}
       </div>
 
-      {/* Area / Bar Chart rendering logic */}
+      {/* Bar Chart rendering logic */}
       <div className="h-44 mt-4">
         <ResponsiveContainer width="100%" height="100%">
-          {period === "year" ? (
-            <BarChart data={chartData} margin={{ left: -15, right: 0, bottom: 0, top: 10 }}>
-              <XAxis dataKey="label" tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} width={38} />
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" vertical={false} />
-              <Tooltip {...tooltipStyle} formatter={(val: number) => [`${Number(val).toFixed(metric === 'water' || metric === 'weight' ? 1 : 0)}${selectedMetricConfig.unit}`, selectedMetricConfig.label]} />
-              <Bar dataKey={metric} name={`Avg ${selectedMetricConfig.label}`} fill={selectedMetricConfig.color} radius={[3, 3, 0, 0]} />
-              {compare && (
-                <Bar dataKey={`prev${metric.charAt(0).toUpperCase() + metric.slice(1)}`} name={`Prev Avg ${selectedMetricConfig.label}`} fill={selectedMetricConfig.color} radius={[3, 3, 0, 0]} opacity={0.4} />
-              )}
-            </BarChart>
-          ) : (
-            <AreaChart data={chartData} margin={{ left: -15, right: 0, bottom: 0, top: 10 }}>
-              <defs>
-                <linearGradient id="metricGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={selectedMetricConfig.color} stopOpacity={selectedMetricConfig.areaOpacity} />
-                  <stop offset="95%" stopColor={selectedMetricConfig.color} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="label" tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} width={38} />
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" vertical={false} />
-              <Tooltip {...tooltipStyle} formatter={(val: number) => [`${Number(val).toFixed(metric === 'water' || metric === 'weight' ? 1 : 0)}${selectedMetricConfig.unit}`, selectedMetricConfig.label]} />
-              <Area type="monotone" dataKey={metric} name={period === "month" ? `Avg ${selectedMetricConfig.label}` : selectedMetricConfig.label} stroke={selectedMetricConfig.color} fill="url(#metricGrad)" strokeWidth={2} connectNulls />
-              {compare && (
-                <Area type="monotone" dataKey={`prev${metric.charAt(0).toUpperCase() + metric.slice(1)}`} name={`Prev ${selectedMetricConfig.label}`} stroke={selectedMetricConfig.color} fill="none" strokeWidth={1.5} strokeDasharray="4 2" opacity={0.5} connectNulls />
-              )}
-            </AreaChart>
-          )}
+          <BarChart data={chartData} margin={{ left: -5, right: 0, bottom: 0, top: 10 }}>
+            <XAxis dataKey="label" tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} width={42} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" vertical={false} />
+            <Tooltip 
+              {...tooltipStyle} 
+              formatter={(val: number) => [
+                `${Number(val).toFixed(metric === 'water' || metric === 'weight' ? 1 : 0)}${selectedMetricConfig.unit}`, 
+                period === "week" ? selectedMetricConfig.label : `Avg ${selectedMetricConfig.label}`
+              ]} 
+            />
+            <Bar 
+              dataKey={metric} 
+              name={period === "week" ? selectedMetricConfig.label : `Avg ${selectedMetricConfig.label}`} 
+              fill={selectedMetricConfig.color} 
+              radius={[3, 3, 0, 0]} 
+            />
+            {compare && (
+              <Bar 
+                dataKey={`prev${metric.charAt(0).toUpperCase() + metric.slice(1)}`} 
+                name={period === "week" ? `Prev ${selectedMetricConfig.label}` : `Prev Avg ${selectedMetricConfig.label}`} 
+                fill={selectedMetricConfig.color} 
+                radius={[3, 3, 0, 0]} 
+                opacity={0.4} 
+              />
+            )}
+          </BarChart>
         </ResponsiveContainer>
       </div>
 
