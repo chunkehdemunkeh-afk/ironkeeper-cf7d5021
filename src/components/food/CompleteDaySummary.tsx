@@ -154,56 +154,64 @@ export default function CompleteDaySummary({ open, onClose, totals, goals, water
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-lg bg-card border-t border-border rounded-t-2xl p-5 max-h-[85vh] overflow-y-auto"
-              style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}
-
+            className="relative w-full max-w-lg bg-card border-t border-border rounded-t-2xl flex flex-col"
+            style={{ maxHeight: "85dvh" }}
           >
-            {/* Handle */}
-            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1 p-5">
+              {/* Handle */}
+              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
 
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-bold font-display">Day Complete</h2>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-bold font-display">Day Complete</h2>
+                </div>
+                <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
 
-            {/* Macro summary */}
-            <div className="space-y-3 mb-5">
-              <MacroBar label="Calories" value={totals.calories} target={goals.calories} color="bg-primary" />
-              <MacroBar label="Protein" value={totals.protein} target={goals.protein_g} color="bg-blue-400" />
-              <MacroBar label="Carbs" value={totals.carbs} target={goals.carbs_g} color="bg-amber-400" />
-              <MacroBar label="Fat" value={totals.fat} target={goals.fat_g} color="bg-rose-400" />
-              <MacroBar label="Water" value={waterMl / 1000} target={waterGoalMl / 1000} color="bg-blue-400" />
-            </div>
-
-            {/* Suggestions */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 mb-1">
-                <Lightbulb className="h-4 w-4 text-amber-400" />
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tips for tomorrow</p>
+              {/* Macro summary */}
+              <div className="space-y-3 mb-5">
+                <MacroBar label="Calories" value={totals.calories} target={goals.calories} color="bg-primary" />
+                <MacroBar label="Protein" value={totals.protein} target={goals.protein_g} color="bg-blue-400" />
+                <MacroBar label="Carbs" value={totals.carbs} target={goals.carbs_g} color="bg-amber-400" />
+                <MacroBar label="Fat" value={totals.fat} target={goals.fat_g} color="bg-rose-400" />
+                <MacroBar label="Water" value={waterMl / 1000} target={waterGoalMl / 1000} color="bg-cyan-400" />
               </div>
-              {suggestions.map((s, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 + i * 0.1 }}
-                  className="flex gap-3 p-3 rounded-xl bg-secondary/50 border border-border"
-                >
-                  <span className="text-lg shrink-0">{s.icon}</span>
-                  <p className="text-xs text-foreground/90 leading-relaxed">{s.text}</p>
-                </motion.div>
-              ))}
+
+              {/* Suggestions */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Lightbulb className="h-4 w-4 text-amber-400" />
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tips for tomorrow</p>
+                </div>
+                {suggestions.map((s, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + i * 0.1 }}
+                    className="flex gap-3 p-3 rounded-xl bg-secondary/50 border border-border"
+                  >
+                    <span className="text-lg shrink-0">{s.icon}</span>
+                    <p className="text-xs text-foreground/90 leading-relaxed">{s.text}</p>
+                  </motion.div>
+                ))}
+              </div>
             </div>
 
-            <Button onClick={onClose} className="w-full mt-5">
-              Done
-            </Button>
+            {/* Sticky footer — always visible, clears the home indicator */}
+            <div
+              className="shrink-0 px-5 pt-3 border-t border-border/40 bg-card"
+              style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}
+            >
+              <Button onClick={onClose} className="w-full h-11">
+                Done
+              </Button>
+            </div>
           </motion.div>
         </motion.div>
       )}
