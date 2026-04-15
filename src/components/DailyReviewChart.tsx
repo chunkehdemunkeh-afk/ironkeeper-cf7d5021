@@ -5,18 +5,29 @@ import { fetchDailyLogs, fetchWorkoutHistory, type DailyLog } from "@/lib/cloud-
 import { motion } from "framer-motion";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, Legend,
+  ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import { CalendarCheck, ChevronLeft, ChevronRight, GitCompare, Dumbbell } from "lucide-react";
 import { format, subDays, subWeeks, subMonths, subYears, parseISO, startOfMonth, startOfWeek, endOfWeek } from "date-fns";
 
 type Period = "day" | "week" | "month" | "year";
+type Metric = "calories" | "protein" | "carbs" | "fat" | "water" | "weight" | "workouts";
 
 const PERIOD_LABELS: Record<Period, string> = {
   day: "Day",
   week: "Week",
   month: "Month",
   year: "Year",
+};
+
+const METRIC_CONFIG: Record<Metric, { label: string; short: string; color: string; unit: string; areaOpacity: number }> = {
+  calories: { label: "Calories", short: "Cals", color: "hsl(36, 95%, 55%)", unit: "kcal", areaOpacity: 0.3 },
+  protein: { label: "Protein", short: "Prot", color: "hsl(210, 80%, 60%)", unit: "g", areaOpacity: 0.3 },
+  carbs: { label: "Carbs", short: "Carb", color: "hsl(40, 95%, 55%)", unit: "g", areaOpacity: 0.3 },
+  fat: { label: "Fat", short: "Fat", color: "hsl(340, 80%, 60%)", unit: "g", areaOpacity: 0.3 },
+  water: { label: "Water", short: "H₂O", color: "hsl(190, 85%, 55%)", unit: "L", areaOpacity: 0.2 },
+  weight: { label: "Body Weight", short: "Wt", color: "hsl(280, 70%, 65%)", unit: "kg", areaOpacity: 0.2 },
+  workouts: { label: "Workouts", short: "WOs", color: "hsl(140, 60%, 55%)", unit: "", areaOpacity: 0.2 },
 };
 
 // ── Tooltip styling ────────────────────────────────────────────────────────────
@@ -30,6 +41,11 @@ function fmtDate(d: string, period: Period) {
   const parsed = parseISO(d);
   if (period === "year") return format(parsed, "MMM");
   return format(parsed, "d MMM");
+}
+
+function avg(arr: number[]) {
+  const filtered = arr.filter(v => v > 0);
+  return filtered.length ? filtered.reduce((s, v) => s + v, 0) / filtered.length : 0;
 }
 
 function MacroStat({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
@@ -50,6 +66,7 @@ function MacroStat({ label, value, goal, color }: { label: string; value: number
 export default function DailyReviewChart() {
   const { user } = useAuth();
   const [period, setPeriod] = useState<Period>("week");
+  const [metric, setMetric] = useState<Metric>("calories");
   const [compare, setCompare] = useState(false);
 
   // For "day" period — which specific day is selected
@@ -70,11 +87,11 @@ export default function DailyReviewChart() {
   // ── Slice logs for the current period window ────────────────────────────────
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
-  const { currentLogs, previousLogs, xKey } = useMemo(() => {
+  const { currentLogs, previousLogs } = useMemo(() => {
     if (period === "day") {
       const current = logs.filter(l => l.date === selectedDay);
       const prev = logs.filter(l => l.date === format(subDays(parseISO(selectedDay), 1), "yyyy-MM-dd"));
-      return { currentLogs: current, previousLogs: prev, xKey: "date" as const };
+      return { currentLogs: current, previousLogs: prev };
     }
 
     if (period === "week") {
@@ -84,7 +101,6 @@ export default function DailyReviewChart() {
       return {
         currentLogs: logs.filter(l => l.date >= weekStart && l.date <= today),
         previousLogs: logs.filter(l => l.date >= prevWeekStart && l.date <= prevWeekEnd),
-        xKey: "date" as const,
       };
     }
 
@@ -95,7 +111,6 @@ export default function DailyReviewChart() {
       return {
         currentLogs: logs.filter(l => l.date >= monthStart && l.date <= today),
         previousLogs: logs.filter(l => l.date >= prevMonthStart && l.date <= prevMonthEnd),
-        xKey: "date" as const,
       };
     }
 
@@ -105,64 +120,116 @@ export default function DailyReviewChart() {
     return {
       currentLogs: logs.filter(l => l.date >= yearStart && l.date <= today),
       previousLogs: logs.filter(l => l.date >= prevYearStart && l.date < yearStart),
-      xKey: "date" as const,
     };
   }, [logs, period, selectedDay, today]);
 
   // ── Build chart data ────────────────────────────────────────────────────────
   const chartData = useMemo(() => {
     if (period === "year") {
-      // Monthly averages
-      const byMonth: Record<string, { calories: number[]; protein: number[]; label: string }> = {};
+      // Monthly averages / sums
+      const byMonth: Record<string, { 
+        c: number[]; p: number[]; ca: number[]; f: number[]; wa: number[]; we: number[]; wo: number; label: string;
+        prev_c: number[]; prev_p: number[]; prev_ca: number[]; prev_f: number[]; prev_wa: number[]; prev_we: number[]; prev_wo: number;
+      }> = {};
+      
+      const initMonth = (key: string, label: string) => {
+        if (!byMonth[key]) byMonth[key] = { c: [], p: [], ca: [], f: [], wa: [], we: [], wo: 0, label, prev_c: [], prev_p: [], prev_ca: [], prev_f: [], prev_wa: [], prev_we: [], prev_wo: 0 };
+      };
+
       currentLogs.forEach(l => {
-        const monthKey = l.date.substring(0, 7);
-        if (!byMonth[monthKey]) byMonth[monthKey] = { calories: [], protein: [], label: format(parseISO(l.date), "MMM") };
-        byMonth[monthKey].calories.push(l.calories);
-        byMonth[monthKey].protein.push(l.protein_g);
+        const key = l.date.substring(0, 7);
+        initMonth(key, format(parseISO(l.date), "MMM"));
+        byMonth[key].c.push(l.calories);
+        byMonth[key].p.push(l.protein_g);
+        byMonth[key].ca.push(l.carbs_g);
+        byMonth[key].f.push(l.fat_g);
+        byMonth[key].wa.push(l.water_ml);
+        if (l.weight_kg) byMonth[key].we.push(l.weight_kg);
       });
 
-      const prevByMonth: Record<string, { calories: number[]; protein: number[] }> = {};
+      workouts.filter(w => w.date >= currentLogs[0]?.date && w.date <= today).forEach(w => {
+         const key = w.date.substring(0, 7);
+         if (byMonth[key]) byMonth[key].wo += 1;
+      });
+
+      // Same for previous year
       previousLogs.forEach(l => {
-        const monthKey = l.date.substring(0, 7);
-        if (!prevByMonth[monthKey]) prevByMonth[monthKey] = { calories: [], protein: [] };
-        prevByMonth[monthKey].calories.push(l.calories);
-        prevByMonth[monthKey].protein.push(l.protein_g);
+        const shiftedDate = format(new Date(parseISO(l.date).getTime() + 365 * 86400000), "yyyy-MM-dd");
+        const key = shiftedDate.substring(0, 7);
+        if (byMonth[key]) {
+          byMonth[key].prev_c.push(l.calories);
+          byMonth[key].prev_p.push(l.protein_g);
+          byMonth[key].prev_ca.push(l.carbs_g);
+          byMonth[key].prev_f.push(l.fat_g);
+          byMonth[key].prev_wa.push(l.water_ml);
+          if (l.weight_kg) byMonth[key].prev_we.push(l.weight_kg);
+        }
       });
-
-      const avg = (arr: number[]) => arr.length ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : 0;
+      workouts.filter(w => w.date >= previousLogs[0]?.date && w.date <= previousLogs[previousLogs.length - 1]?.date).forEach(w => {
+         const shiftedDate = format(new Date(parseISO(w.date).getTime() + 365 * 86400000), "yyyy-MM-dd");
+         const key = shiftedDate.substring(0, 7);
+         if (byMonth[key]) byMonth[key].prev_wo += 1;
+      });
 
       return Object.entries(byMonth).map(([key, v]) => ({
         label: v.label,
-        calories: avg(v.calories),
-        protein: avg(v.protein),
-        prevCalories: avg(prevByMonth[key]?.calories ?? []),
-        prevProtein: avg(prevByMonth[key]?.protein ?? []),
+        calories: avg(v.c),
+        protein: avg(v.p),
+        carbs: avg(v.ca),
+        fat: avg(v.f),
+        water: avg(v.wa) / 1000,
+        weight: avg(v.we),
+        workouts: v.wo,
+        prevCalories: avg(v.prev_c),
+        prevProtein: avg(v.prev_p),
+        prevCarbs: avg(v.prev_ca),
+        prevFat: avg(v.prev_f),
+        prevWater: avg(v.prev_wa) / 1000,
+        prevWeight: avg(v.prev_we),
+        prevWorkouts: v.prev_wo,
       }));
     }
 
     // Day / week / month — per day entries
     const prevMap: Record<string, DailyLog> = {};
+    const prevWorkoutsMap: Record<string, number> = {};
+    
     if (compare) {
-      const offset = period === "week" ? 7 : period === "month" ? 30 : 1;
+      const offsetDays = period === "week" ? 7 : period === "month" ? 28 : 1; 
       previousLogs.forEach(l => {
-        const shifted = format(new Date(parseISO(l.date).getTime() + offset * 86400000), "yyyy-MM-dd");
+        const shifted = format(new Date(parseISO(l.date).getTime() + offsetDays * 86400000), "yyyy-MM-dd");
         prevMap[shifted] = l;
+      });
+      workouts.forEach(w => {
+        const shifted = format(new Date(parseISO(w.date).getTime() + offsetDays * 86400000), "yyyy-MM-dd");
+        prevWorkoutsMap[shifted] = (prevWorkoutsMap[shifted] || 0) + 1;
       });
     }
 
-    return currentLogs.map(l => ({
-      label: fmtDate(l.date, period),
-      date: l.date,
-      calories: l.calories,
-      protein: l.protein_g,
-      carbs: l.carbs_g,
-      fat: l.fat_g,
-      water: Math.round(l.water_ml / 100) / 10, // litres
-      calorieGoal: l.calorie_goal,
-      prevCalories: prevMap[l.date]?.calories,
-      prevProtein: prevMap[l.date]?.protein_g,
-    }));
-  }, [currentLogs, previousLogs, period, compare]);
+    return currentLogs.map(l => {
+      const isPrev = compare ? !!prevMap[l.date] : false;
+      const dWorkouts = workouts.filter((w: any) => w.date === l.date);
+
+      return {
+        label: fmtDate(l.date, period),
+        date: l.date,
+        calories: l.calories,
+        protein: l.protein_g,
+        carbs: l.carbs_g,
+        fat: l.fat_g,
+        water: Math.round(l.water_ml / 100) / 10,
+        weight: l.weight_kg ?? 0,
+        workouts: dWorkouts.length,
+        prevCalories: isPrev ? prevMap[l.date]?.calories : undefined,
+        prevProtein: isPrev ? prevMap[l.date]?.protein_g : undefined,
+        prevCarbs: isPrev ? prevMap[l.date]?.carbs_g : undefined,
+        prevFat: isPrev ? prevMap[l.date]?.fat_g : undefined,
+        prevWater: isPrev && prevMap[l.date] ? (prevMap[l.date]?.water_ml || 0) / 1000 : undefined,
+        prevWeight: isPrev ? prevMap[l.date]?.weight_kg : undefined,
+        prevWorkouts: compare ? prevWorkoutsMap[l.date] || 0 : undefined,
+      };
+    });
+  }, [currentLogs, previousLogs, period, compare, workouts]);
 
   // ── Day view — single selected date detail ─────────────────────────────────
   const dayLog = period === "day" ? currentLogs[0] ?? null : null;
@@ -185,6 +252,14 @@ export default function DailyReviewChart() {
       </motion.div>
     );
   }
+
+  const selectedMetricConfig = METRIC_CONFIG[metric];
+  
+  // Custom tooltips
+  const formatYAxis = (val: number) => {
+    if (val === 0) return "";
+    return val >= 1000 && metric === "calories" ? `${(val / 1000).toFixed(1)}k` : val;
+  };
 
   return (
     <motion.div
@@ -229,6 +304,24 @@ export default function DailyReviewChart() {
           </button>
         ))}
       </div>
+
+      {/* Metric Selector Pill Strip (Only showing if period != day) */}
+      {period !== "day" && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none snap-x mask-edges">
+          {(Object.keys(METRIC_CONFIG) as Metric[]).map(m => (
+            <button
+              key={m}
+              onClick={() => setMetric(m)}
+              className={`shrink-0 snap-start px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider rounded-lg border transition-colors
+                ${metric === m 
+                  ? "bg-secondary text-foreground border-border/80" 
+                  : "bg-transparent text-muted-foreground border-transparent hover:bg-secondary/40"}`}
+            >
+              {METRIC_CONFIG[m].short}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Day view ─────────────────────────────────────────────────────── */}
       {period === "day" && (
@@ -315,28 +408,44 @@ export default function DailyReviewChart() {
       {(period === "week" || period === "month") && chartData.length > 0 && (
         <div className="h-44">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ left: -10, right: 0 }}>
+            <AreaChart data={chartData} margin={{ left: -15, right: 0, bottom: 0, top: 10 }}>
               <defs>
-                <linearGradient id="calGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(36, 95%, 55%)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(36, 95%, 55%)" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="protGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(210, 80%, 60%)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(210, 80%, 60%)" stopOpacity={0} />
+                <linearGradient id="metricGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={selectedMetricConfig.color} stopOpacity={selectedMetricConfig.areaOpacity} />
+                  <stop offset="95%" stopColor={selectedMetricConfig.color} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="label" tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} axisLine={false} tickLine={false} width={32} />
+              <YAxis tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} width={38} />
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" vertical={false} />
-              <Tooltip {...tooltipStyle} />
-              <Area type="monotone" dataKey="calories" name="Calories" stroke="hsl(36, 95%, 55%)" fill="url(#calGrad)" strokeWidth={2} />
-              <Area type="monotone" dataKey="protein" name="Protein (g)" stroke="hsl(210, 80%, 60%)" fill="url(#protGrad)" strokeWidth={2} />
+              <Tooltip 
+                {...tooltipStyle} 
+                formatter={(val: number | string) => [
+                  `${Number(val).toFixed(metric === 'water' || metric === 'weight' ? 1 : 0)}${selectedMetricConfig.unit}`, 
+                  selectedMetricConfig.label
+                ]} 
+              />
+              <Area 
+                type="monotone" 
+                dataKey={metric} 
+                name={selectedMetricConfig.label} 
+                stroke={selectedMetricConfig.color} 
+                fill="url(#metricGrad)" 
+                strokeWidth={2} 
+                connectNulls
+              />
               {compare && (
-                <>
-                  <Area type="monotone" dataKey="prevCalories" name="Prev Cals" stroke="hsl(36, 95%, 55%)" fill="none" strokeWidth={1.5} strokeDasharray="4 2" opacity={0.5} />
-                  <Area type="monotone" dataKey="prevProtein" name="Prev Protein" stroke="hsl(210, 80%, 60%)" fill="none" strokeWidth={1.5} strokeDasharray="4 2" opacity={0.5} />
-                </>
+                <Area 
+                  type="monotone" 
+                  dataKey={`prev${metric.charAt(0).toUpperCase() + metric.slice(1)}`} 
+                  name={`Prev ${selectedMetricConfig.label}`} 
+                  stroke={selectedMetricConfig.color} 
+                  fill="none" 
+                  strokeWidth={1.5} 
+                  strokeDasharray="4 2" 
+                  opacity={0.5} 
+                  connectNulls
+                />
               )}
             </AreaChart>
           </ResponsiveContainer>
@@ -347,41 +456,46 @@ export default function DailyReviewChart() {
       {period === "year" && chartData.length > 0 && (
         <div className="h-44">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ left: -10, right: 0 }}>
+            <BarChart data={chartData} margin={{ left: -15, right: 0, bottom: 0, top: 10 }}>
               <XAxis dataKey="label" tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} axisLine={false} tickLine={false} width={32} />
+              <YAxis tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} width={38} />
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" vertical={false} />
-              <Tooltip {...tooltipStyle} />
-              <Bar dataKey="calories" name="Avg Calories" fill="hsl(36, 95%, 55%)" radius={[3, 3, 0, 0]} />
+              <Tooltip 
+                {...tooltipStyle} 
+                formatter={(val: number | string) => [
+                  `${Number(val).toFixed(metric === 'water' || metric === 'weight' ? 1 : 0)}${selectedMetricConfig.unit}`, 
+                  selectedMetricConfig.label
+                ]} 
+              />
+              <Bar 
+                dataKey={metric} 
+                name={`Avg ${selectedMetricConfig.label}`} 
+                fill={selectedMetricConfig.color} 
+                radius={[3, 3, 0, 0]} 
+              />
               {compare && (
-                <Bar dataKey="prevCalories" name="Prev Avg Cals" fill="hsl(36, 95%, 55%)" radius={[3, 3, 0, 0]} opacity={0.4} />
+                <Bar 
+                  dataKey={`prev${metric.charAt(0).toUpperCase() + metric.slice(1)}`} 
+                  name={`Prev Avg ${selectedMetricConfig.label}`} 
+                  fill={selectedMetricConfig.color} 
+                  radius={[3, 3, 0, 0]} 
+                  opacity={0.4} 
+                />
               )}
             </BarChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* Empty state for chart periods */}
-      {period !== "day" && chartData.length === 0 && (
-        <p className="text-xs text-muted-foreground text-center py-4">
-          No logs for this {period} yet
-        </p>
-      )}
-
       {/* Legend */}
       {period !== "day" && chartData.length > 0 && (
-        <div className="flex gap-4 mt-1">
+        <div className="flex gap-4 mt-2 justify-center">
           <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <span className="h-2 w-2 rounded-full bg-primary inline-block" /> Calories
+            <span className="h-2 w-2 rounded-full inline-block" style={{ backgroundColor: selectedMetricConfig.color }} /> {selectedMetricConfig.label}
           </span>
-          {(period === "week" || period === "month") && (
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <span className="h-2 w-2 rounded-full bg-blue-400 inline-block" /> Protein
-            </span>
-          )}
           {compare && (
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground opacity-60">
-              <span className="h-1.5 w-4 border-t-2 border-dashed border-primary inline-block" /> Prev {period}
+              <span className="h-1.5 w-4 border-t-2 border-dashed inline-block" style={{ borderColor: selectedMetricConfig.color }} /> Prev {period}
             </span>
           )}
         </div>
