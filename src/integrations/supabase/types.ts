@@ -47,61 +47,6 @@ export type Database = {
         }
         Relationships: []
       }
-      daily_logs: {
-        Row: {
-          id: string
-          user_id: string
-          date: string
-          calories: number
-          protein_g: number
-          carbs_g: number
-          fat_g: number
-          water_ml: number
-          calorie_goal: number
-          protein_goal_g: number
-          carbs_goal_g: number
-          fat_goal_g: number
-          water_goal_ml: number
-          weight_kg: number | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          date: string
-          calories?: number
-          protein_g?: number
-          carbs_g?: number
-          fat_g?: number
-          water_ml?: number
-          calorie_goal?: number
-          protein_goal_g?: number
-          carbs_goal_g?: number
-          fat_goal_g?: number
-          water_goal_ml?: number
-          weight_kg?: number | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          date?: string
-          calories?: number
-          protein_g?: number
-          carbs_g?: number
-          fat_g?: number
-          water_ml?: number
-          calorie_goal?: number
-          protein_goal_g?: number
-          carbs_goal_g?: number
-          fat_goal_g?: number
-          water_goal_ml?: number
-          weight_kg?: number | null
-          created_at?: string
-        }
-        Relationships: []
-      }
-
       body_measurements: {
         Row: {
           body_fat_pct: number | null
@@ -162,6 +107,60 @@ export type Database = {
           read?: boolean
           reps?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      daily_logs: {
+        Row: {
+          calorie_goal: number
+          calories: number
+          carbs_g: number
+          carbs_goal_g: number
+          created_at: string
+          date: string
+          fat_g: number
+          fat_goal_g: number
+          id: string
+          protein_g: number
+          protein_goal_g: number
+          user_id: string
+          water_goal_ml: number
+          water_ml: number
+          weight_kg: number | null
+        }
+        Insert: {
+          calorie_goal?: number
+          calories?: number
+          carbs_g?: number
+          carbs_goal_g?: number
+          created_at?: string
+          date: string
+          fat_g?: number
+          fat_goal_g?: number
+          id?: string
+          protein_g?: number
+          protein_goal_g?: number
+          user_id: string
+          water_goal_ml?: number
+          water_ml?: number
+          weight_kg?: number | null
+        }
+        Update: {
+          calorie_goal?: number
+          calories?: number
+          carbs_g?: number
+          carbs_goal_g?: number
+          created_at?: string
+          date?: string
+          fat_g?: number
+          fat_goal_g?: number
+          id?: string
+          protein_g?: number
+          protein_goal_g?: number
+          user_id?: string
+          water_goal_ml?: number
+          water_ml?: number
+          weight_kg?: number | null
         }
         Relationships: []
       }
