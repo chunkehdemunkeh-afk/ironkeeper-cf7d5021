@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { fetchDailyLogs, fetchWorkoutHistory, type DailyLog } from "@/lib/cloud-data";
 import { motion } from "framer-motion";
 import {
@@ -11,7 +12,7 @@ import { CalendarCheck, ChevronLeft, ChevronRight, GitCompare, Dumbbell } from "
 import { format, subDays, subWeeks, subMonths, subYears, parseISO, startOfMonth, startOfWeek, endOfWeek } from "date-fns";
 
 type Period = "day" | "week" | "month" | "year";
-type Metric = "calories" | "protein" | "carbs" | "fat" | "water" | "weight" | "workouts";
+type Metric = "weight" | "calories" | "water" | "volume";
 
 const PERIOD_LABELS: Record<Period, string> = {
   day: "Day",
@@ -21,13 +22,10 @@ const PERIOD_LABELS: Record<Period, string> = {
 };
 
 const METRIC_CONFIG: Record<Metric, { label: string; short: string; color: string; unit: string; areaOpacity: number }> = {
-  calories: { label: "Calories", short: "Cals", color: "hsl(36, 95%, 55%)", unit: "kcal", areaOpacity: 0.3 },
-  protein: { label: "Protein", short: "Prot", color: "hsl(210, 80%, 60%)", unit: "g", areaOpacity: 0.3 },
-  carbs: { label: "Carbs", short: "Carb", color: "hsl(40, 95%, 55%)", unit: "g", areaOpacity: 0.3 },
-  fat: { label: "Fat", short: "Fat", color: "hsl(340, 80%, 60%)", unit: "g", areaOpacity: 0.3 },
-  water: { label: "Water", short: "H₂O", color: "hsl(190, 85%, 55%)", unit: "L", areaOpacity: 0.2 },
-  weight: { label: "Body Weight", short: "Wt", color: "hsl(280, 70%, 65%)", unit: "kg", areaOpacity: 0.2 },
-  workouts: { label: "Workouts", short: "WOs", color: "hsl(140, 60%, 55%)", unit: "", areaOpacity: 0.2 },
+  weight: { label: "Body Weight", short: "Weight", color: "hsl(280, 70%, 65%)", unit: "kg", areaOpacity: 0.2 },
+  calories: { label: "Calories", short: "Calories", color: "hsl(36, 95%, 55%)", unit: "kcal", areaOpacity: 0.3 },
+  water: { label: "Water Intake", short: "Water", color: "hsl(190, 85%, 55%)", unit: "L", areaOpacity: 0.2 },
+  volume: { label: "Total Lifted", short: "Volume", color: "hsl(140, 60%, 55%)", unit: "kg", areaOpacity: 0.2 },
 };
 
 // ── Tooltip styling ────────────────────────────────────────────────────────────
@@ -84,6 +82,27 @@ export default function DailyReviewChart() {
     enabled: !!user,
   });
 
+  const { data: volumeByDate = {} } = useQuery({
+    queryKey: ["daily-volume", user?.id],
+    queryFn: async () => {
+      if (!user) return {};
+      const { data: hData } = await supabase.from("workout_history").select("id, date").eq("user_id", user.id);
+      if (!hData || hData.length === 0) return {};
+      const historyToDate = Object.fromEntries(hData.map((h: any) => [h.id, h.date]));
+      
+      const { data: sData } = await supabase.from("workout_sets").select("workout_history_id, reps, weight").eq("user_id", user.id);
+      if (!sData) return {};
+      
+      const vMap: Record<string, number> = {};
+      sData.forEach((s: any) => {
+        const date = historyToDate[s.workout_history_id];
+        if (date) vMap[date] = (vMap[date] || 0) + (s.reps * s.weight);
+      });
+      return vMap;
+    },
+    enabled: !!user
+  });
+
   // ── Slice logs for the current period window ────────────────────────────────
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
@@ -128,12 +147,12 @@ export default function DailyReviewChart() {
     if (period === "year") {
       // Monthly averages / sums
       const byMonth: Record<string, { 
-        c: number[]; p: number[]; ca: number[]; f: number[]; wa: number[]; we: number[]; wo: number; label: string;
-        prev_c: number[]; prev_p: number[]; prev_ca: number[]; prev_f: number[]; prev_wa: number[]; prev_we: number[]; prev_wo: number;
+        c: number[]; p: number[]; ca: number[]; f: number[]; wa: number[]; we: number[]; vol: number[]; label: string;
+        prev_c: number[]; prev_p: number[]; prev_ca: number[]; prev_f: number[]; prev_wa: number[]; prev_we: number[]; prev_vol: number[];
       }> = {};
       
       const initMonth = (key: string, label: string) => {
-        if (!byMonth[key]) byMonth[key] = { c: [], p: [], ca: [], f: [], wa: [], we: [], wo: 0, label, prev_c: [], prev_p: [], prev_ca: [], prev_f: [], prev_wa: [], prev_we: [], prev_wo: 0 };
+        if (!byMonth[key]) byMonth[key] = { c: [], p: [], ca: [], f: [], wa: [], we: [], vol: [], label, prev_c: [], prev_p: [], prev_ca: [], prev_f: [], prev_wa: [], prev_we: [], prev_vol: [] };
       };
 
       currentLogs.forEach(l => {
@@ -145,11 +164,7 @@ export default function DailyReviewChart() {
         byMonth[key].f.push(l.fat_g);
         byMonth[key].wa.push(l.water_ml);
         if (l.weight_kg) byMonth[key].we.push(l.weight_kg);
-      });
-
-      workouts.filter(w => w.date >= currentLogs[0]?.date && w.date <= today).forEach(w => {
-         const key = w.date.substring(0, 7);
-         if (byMonth[key]) byMonth[key].wo += 1;
+        if (volumeByDate[l.date]) byMonth[key].vol.push(volumeByDate[l.date]);
       });
 
       // Same for previous year
@@ -163,12 +178,8 @@ export default function DailyReviewChart() {
           byMonth[key].prev_f.push(l.fat_g);
           byMonth[key].prev_wa.push(l.water_ml);
           if (l.weight_kg) byMonth[key].prev_we.push(l.weight_kg);
+          if (volumeByDate[l.date]) byMonth[key].prev_vol.push(volumeByDate[l.date]);
         }
-      });
-      workouts.filter(w => w.date >= previousLogs[0]?.date && w.date <= previousLogs[previousLogs.length - 1]?.date).forEach(w => {
-         const shiftedDate = format(new Date(parseISO(w.date).getTime() + 365 * 86400000), "yyyy-MM-dd");
-         const key = shiftedDate.substring(0, 7);
-         if (byMonth[key]) byMonth[key].prev_wo += 1;
       });
 
       return Object.entries(byMonth).map(([key, v]) => ({
@@ -179,14 +190,14 @@ export default function DailyReviewChart() {
         fat: avg(v.f),
         water: avg(v.wa) / 1000,
         weight: avg(v.we),
-        workouts: v.wo,
+        volume: avg(v.vol),
         prevCalories: avg(v.prev_c),
         prevProtein: avg(v.prev_p),
         prevCarbs: avg(v.prev_ca),
         prevFat: avg(v.prev_f),
         prevWater: avg(v.prev_wa) / 1000,
         prevWeight: avg(v.prev_we),
-        prevWorkouts: v.prev_wo,
+        prevVolume: avg(v.prev_vol),
       }));
     }
 
@@ -208,7 +219,6 @@ export default function DailyReviewChart() {
 
     return currentLogs.map(l => {
       const isPrev = compare ? !!prevMap[l.date] : false;
-      const dWorkouts = workouts.filter((w: any) => w.date === l.date);
 
       return {
         label: fmtDate(l.date, period),
@@ -219,17 +229,17 @@ export default function DailyReviewChart() {
         fat: l.fat_g,
         water: Math.round(l.water_ml / 100) / 10,
         weight: l.weight_kg ?? 0,
-        workouts: dWorkouts.length,
+        volume: volumeByDate[l.date] || 0,
         prevCalories: isPrev ? prevMap[l.date]?.calories : undefined,
         prevProtein: isPrev ? prevMap[l.date]?.protein_g : undefined,
         prevCarbs: isPrev ? prevMap[l.date]?.carbs_g : undefined,
         prevFat: isPrev ? prevMap[l.date]?.fat_g : undefined,
         prevWater: isPrev && prevMap[l.date] ? (prevMap[l.date]?.water_ml || 0) / 1000 : undefined,
         prevWeight: isPrev ? prevMap[l.date]?.weight_kg : undefined,
-        prevWorkouts: compare ? prevWorkoutsMap[l.date] || 0 : undefined,
+        prevVolume: isPrev ? volumeByDate[prevMap[l.date]?.date] : undefined,
       };
     });
-  }, [currentLogs, previousLogs, period, compare, workouts]);
+  }, [currentLogs, previousLogs, period, compare, volumeByDate]);
 
   // ── Day view — single selected date detail ─────────────────────────────────
   const dayLog = period === "day" ? currentLogs[0] ?? null : null;
