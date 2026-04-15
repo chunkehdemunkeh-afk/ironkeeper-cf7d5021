@@ -6,10 +6,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
-export default function HomeDailySummary() {
+interface Props {
+  date?: string;
+}
+
+export default function HomeDailySummary({ date }: Props) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const today = format(new Date(), "yyyy-MM-dd");
+  const targetDate = date || format(new Date(), "yyyy-MM-dd");
   const [totals, setTotals] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [goals, setGoals] = useState<{ calories: number; protein_g: number; carbs_g: number; fat_g: number; water_goal_ml?: number } | null>(null);
   const [waterMl, setWaterMl] = useState(0);
@@ -21,7 +25,7 @@ export default function HomeDailySummary() {
         .from("food_logs")
         .select("calories, protein_g, carbs_g, fat_g")
         .eq("user_id", user.id)
-        .eq("date", today),
+        .eq("date", targetDate),
       supabase
         .from("nutrition_goals")
         .select("calories, protein_g, carbs_g, fat_g, water_goal_ml")
@@ -31,7 +35,7 @@ export default function HomeDailySummary() {
         .from("water_intake")
         .select("amount_ml")
         .eq("user_id", user.id)
-        .eq("date", today),
+        .eq("date", targetDate),
     ]).then(([logsRes, goalsRes, waterRes]) => {
       const logs = logsRes.data || [];
       setTotals(logs.reduce(
@@ -47,7 +51,7 @@ export default function HomeDailySummary() {
       const water = waterRes.data || [];
       setWaterMl(water.reduce((s: number, e: any) => s + e.amount_ml, 0));
     });
-  }, [user, today]);
+  }, [user, targetDate]);
 
   if (!goals) return null;
 
@@ -64,7 +68,7 @@ export default function HomeDailySummary() {
     >
       <div className="flex items-center justify-between mb-3">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          Today's Nutrition
+          Nutrition
         </p>
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
       </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, AlertTriangle, X, Lightbulb, Scale, Utensils, Droplet } from "lucide-react";
+import { CheckCircle2, AlertTriangle, X, Scale, Utensils, Droplet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,9 +18,13 @@ interface DayStatus {
   waterGoalMl: number;
 }
 
-export default function HomeCompleteDay() {
+interface Props {
+  date?: string;
+}
+
+export default function HomeCompleteDay({ date }: Props) {
   const { user } = useAuth();
-  const today = format(new Date(), "yyyy-MM-dd");
+  const targetDate = date || format(new Date(), "yyyy-MM-dd");
   const [status, setStatus] = useState<DayStatus | null>(null);
   const [showWarning, setShowWarning] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
@@ -32,19 +36,19 @@ export default function HomeCompleteDay() {
         .from("body_measurements")
         .select("id")
         .eq("user_id", user.id)
-        .gte("date", today + "T00:00:00")
-        .lte("date", today + "T23:59:59")
+        .gte("date", targetDate + "T00:00:00")
+        .lte("date", targetDate + "T23:59:59")
         .limit(1),
       supabase
         .from("food_logs")
         .select("calories, protein_g, carbs_g, fat_g")
         .eq("user_id", user.id)
-        .eq("date", today),
+        .eq("date", targetDate),
       supabase
         .from("water_intake")
         .select("amount_ml")
         .eq("user_id", user.id)
-        .eq("date", today),
+        .eq("date", targetDate),
       supabase
         .from("nutrition_goals")
         .select("calories, protein_g, carbs_g, fat_g, water_goal_ml")
@@ -75,7 +79,7 @@ export default function HomeCompleteDay() {
         waterGoalMl: goals?.water_goal_ml || 2500,
       });
     });
-  }, [user, today]);
+  }, [user, targetDate]);
 
   if (!user || !status) return null;
 
@@ -97,7 +101,7 @@ export default function HomeCompleteDay() {
     if (status.goals) {
       setShowSummary(true);
     } else {
-      toast.success("Day completed! 🎉");
+      toast.success("Day completed!");
     }
   };
 
@@ -142,7 +146,7 @@ export default function HomeCompleteDay() {
               </div>
 
               <p className="text-sm text-muted-foreground mb-4">
-                You haven't logged the following today:
+                You haven't logged the following:
               </p>
 
               <div className="space-y-2 mb-5">

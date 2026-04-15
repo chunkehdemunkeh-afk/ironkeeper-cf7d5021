@@ -125,13 +125,12 @@ const Index = () => {
         </div>
 
         {/* Date-aware cards with slide animation */}
-        <AnimatePresence mode="wait" custom={slideDir}>
+        <AnimatePresence mode="wait">
           <motion.div
             key={dateStr}
-            custom={slideDir}
-            initial={(dir: number) => ({ x: dir * 60, opacity: 0 })}
+            initial={{ x: slideDir * 60, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={(dir: number) => ({ x: dir * -60, opacity: 0 })}
+            exit={{ x: slideDir * -60, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
             className="space-y-5"
           >
