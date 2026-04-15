@@ -12,14 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.6",
+    version: "1.6.7",
     date: "2026-04-15",
     title: "Updates & Fixes",
     changes: [
-      "Bodyweight toggle for exercises like leg raises",
-      "Light/Heavy cable toggle only on standalone cable exercises",
-      "Ab superset: correct toggles per exercise type",
-      "Improved iOS barcode scanner reliability",
+      "Profile page updates",
     ],
   },
   {
