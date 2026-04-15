@@ -10,17 +10,10 @@ interface Props {
   onFoodFound: (food: FoodItem) => void;
 }
 
-// Detect iOS — includes iPad (iOS 13+ disguises as MacIntel)
+// Detect iOS
 const isIOS =
   /iPhone|iPad|iPod/.test(navigator.userAgent) ||
   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-// Check if native BarcodeDetector is available (Safari 16+, Chrome)
-const hasBarcodeDetector =
-  typeof window !== "undefined" && "BarcodeDetector" in window;
-
-// The formats we care about for food products
-const FOOD_BARCODE_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e"];
 
 export default function BarcodeScanner({ onFoodFound }: Props) {
   const [scanning, setScanning]   = useState(false);
@@ -29,21 +22,12 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
   const [hwZoom, setHwZoom]       = useState(1);
   const [hwZoomRange, setHwZoomRange] = useState<{ min: number; max: number } | null>(null);
 
-  // Refs for native path (iOS BarcodeDetector)
-  const videoRef   = useRef<HTMLVideoElement | null>(null);
-  const canvasRef  = useRef<HTMLCanvasElement | null>(null);
-  const streamRef  = useRef<MediaStream | null>(null);
-  const rafRef     = useRef<number | null>(null);
-  const detectorRef = useRef<any>(null);
-
-  // Refs for html5-qrcode path (Android)
   const scannerRef  = useRef<Html5Qrcode | null>(null);
   const trackRef    = useRef<MediaStreamTrack | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
   const processedRef = useRef(false);
 
-  // ── Handle a successfully decoded barcode ────────────────────────────────────
+  // ── Handle a successfully decoded barcode ──────────────────────────────────
   const handleDecoded = useCallback(async (rawText: string) => {
     if (processedRef.current) return;
     processedRef.current = true;
@@ -59,22 +43,8 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
     }
   }, [onFoodFound]);
 
-  // ── Stop everything ──────────────────────────────────────────────────────────
+  // ── Stop everything ────────────────────────────────────────────────────────
   const stopScanner = useCallback(async () => {
-    // Stop native path
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-
-    // Stop html5-qrcode path
     trackRef.current = null;
     if (scannerRef.current) {
       try {
@@ -82,73 +52,20 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
       } catch {}
       scannerRef.current = null;
     }
-
     setScanning(false);
     setHwZoom(1);
     setHwZoomRange(null);
   }, []);
 
-  // ── iOS native path: getUserMedia + BarcodeDetector ─────────────────────────
-  const startNativeScanner = useCallback(async () => {
-    try {
-      // Ask for the rear camera. Let Safari pick the best lens (wide+autofocus).
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { exact: "environment" },
-          // Do NOT specify width/height on iOS — Safari picks the best resolution.
-        },
-        audio: false,
-      });
-      streamRef.current = stream;
+  // ── Start scanner (html5-qrcode for ALL platforms) ─────────────────────────
+  const startScanner = useCallback(async () => {
+    setError(null);
+    processedRef.current = false;
 
-      // Mount the video
-      const video = videoRef.current!;
-      video.srcObject = stream;
-      video.setAttribute("playsinline", "true"); // critical for iOS
-      video.setAttribute("autoplay", "true");
-      video.muted = true;
-      await video.play();
-
-      // Create the detector
-      const detector = new (window as any).BarcodeDetector({
-        formats: FOOD_BARCODE_FORMATS,
-      });
-      detectorRef.current = detector;
-
-      setScanning(true);
-
-      // Poll frames
-      const tick = async () => {
-        if (!streamRef.current || processedRef.current) return;
-        if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
-          try {
-            const results = await detector.detect(video);
-            if (results.length > 0) {
-              handleDecoded(results[0].rawValue);
-              return; // stop polling
-            }
-          } catch {
-            // detector.detect can fail on a bad frame, just continue
-          }
-        }
-        rafRef.current = requestAnimationFrame(tick);
-      };
-      rafRef.current = requestAnimationFrame(tick);
-
-    } catch (err) {
-      setScanning(false);
-      if (err instanceof Error && err.message.includes("Permission")) {
-        setError("Camera permission denied. Please allow camera access.");
-      } else {
-        setError("Could not start camera. Try using Search instead.");
-      }
-    }
-  }, [handleDecoded]);
-
-  // ── Android path: html5-qrcode ───────────────────────────────────────────────
-  const startHtml5Scanner = useCallback(async () => {
     try {
       const cameras = await Html5Qrcode.getCameras().catch(() => []);
+
+      // Pick the best rear camera — avoid ultra-wide / macro on Android
       const best =
         cameras.find(c => {
           const l = c.label.toLowerCase();
@@ -195,7 +112,26 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
         () => {}
       );
 
-      // Android: expose hardware zoom slider
+      // iOS workaround: reset video constraints after start to kick the decoder
+      // See https://github.com/mebjas/html5-qrcode/issues/820
+      if (isIOS) {
+        try {
+          // Small delay to let the scanner fully initialise
+          await new Promise(r => setTimeout(r, 500));
+          if (scannerRef.current) {
+            const caps = scannerRef.current.getRunningTrackCapabilities() as any;
+            const resetConstraints: MediaTrackConstraints = {
+              width: { ideal: caps?.width?.max ?? 1920 },
+              height: { ideal: caps?.height?.max ?? 1080 },
+            };
+            await scannerRef.current.applyVideoConstraints(resetConstraints);
+          }
+        } catch {
+          // Non-critical — scanner still works without the reset
+        }
+      }
+
+      // Expose hardware zoom + autofocus
       try {
         const videoEl = document.querySelector("#barcode-reader video") as HTMLVideoElement | null;
         const track = videoEl?.srcObject instanceof MediaStream
@@ -205,9 +141,13 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
         if (track) {
           trackRef.current = track;
           const capabilities = track.getCapabilities() as any;
+
+          // Enable continuous autofocus
           if (capabilities?.focusMode?.includes("continuous")) {
             await track.applyConstraints({ advanced: [{ focusMode: "continuous" } as any] });
           }
+
+          // Zoom slider (Android mainly, some iOS devices too)
           if (capabilities?.zoom) {
             const min = capabilities.zoom.min ?? 1;
             const max = Math.min(capabilities.zoom.max ?? 1, 8);
@@ -229,18 +169,6 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
     }
   }, [handleDecoded]);
 
-  const startScanner = useCallback(async () => {
-    setError(null);
-    processedRef.current = false;
-    // Use native BarcodeDetector on iOS (Safari 16+) — most reliable
-    // Fall back to html5-qrcode only on Android / old browsers
-    if (isIOS && hasBarcodeDetector) {
-      await startNativeScanner();
-    } else {
-      await startHtml5Scanner();
-    }
-  }, [startNativeScanner, startHtml5Scanner]);
-
   useEffect(() => { return () => { void stopScanner(); }; }, [stopScanner]);
 
   const applyHwZoom = async (level: number) => {
@@ -261,7 +189,7 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
     );
   }
 
-  const showZoom = scanning && !isIOS && !!hwZoomRange;
+  const showZoom = scanning && !!hwZoomRange;
   const zoomMin  = hwZoomRange?.min ?? 1;
   const zoomMax  = hwZoomRange?.max ?? 4;
 
@@ -291,70 +219,46 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
         </div>
       )}
 
-      {/* ── iOS native viewfinder (raw <video> element) ──────────────────────── */}
-      {isIOS && hasBarcodeDetector && (
-        <div className={`relative w-full max-w-[320px] rounded-xl overflow-hidden ${scanning ? "" : "hidden"}`}>
-          <video
-            ref={videoRef}
-            className="w-full h-auto object-cover"
-            playsInline
-            muted
-            autoPlay
-          />
-          {/* Aim guide overlay */}
-          {scanning && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="border-2 border-primary/70 rounded-lg w-[80%] h-[35%] shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]" />
+      {/* ── html5-qrcode viewfinder (all platforms) ────────────────────────── */}
+      <div className="relative w-full max-w-[320px]">
+        <div
+          id="barcode-reader"
+          ref={containerRef}
+          className={`w-full rounded-xl overflow-hidden ${scanning ? "" : "hidden"}`}
+        />
+        {showZoom && (
+          <div className="absolute bottom-0 left-0 right-0 rounded-b-xl overflow-hidden
+                          bg-black/50 backdrop-blur-sm px-3 pt-2 pb-3 z-10">
+            <div className="flex items-center gap-2">
+              <ZoomOut className="h-3.5 w-3.5 text-white/80 shrink-0" />
+              <Slider
+                min={zoomMin}
+                max={zoomMax}
+                step={0.1}
+                value={[hwZoom]}
+                onValueChange={([v]) => applyHwZoom(v)}
+                className="flex-1"
+              />
+              <ZoomIn className="h-3.5 w-3.5 text-white/80 shrink-0" />
+              <span className="text-xs text-white/80 tabular-nums w-8 text-right">
+                {hwZoom.toFixed(1)}×
+              </span>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Android html5-qrcode viewfinder ─────────────────────────────────── */}
-      {(!isIOS || !hasBarcodeDetector) && (
-        <div className="relative w-full max-w-[320px]">
-          <div
-            id="barcode-reader"
-            ref={containerRef}
-            className={`w-full rounded-xl overflow-hidden ${scanning ? "" : "hidden"}`}
-          />
-          {showZoom && (
-            <div className="absolute bottom-0 left-0 right-0 rounded-b-xl overflow-hidden
-                            bg-black/50 backdrop-blur-sm px-3 pt-2 pb-3 z-10">
-              <div className="flex items-center gap-2">
-                <ZoomOut className="h-3.5 w-3.5 text-white/80 shrink-0" />
-                <Slider
-                  min={zoomMin}
-                  max={zoomMax}
-                  step={0.1}
-                  value={[hwZoom]}
-                  onValueChange={([v]) => applyHwZoom(v)}
-                  className="flex-1"
-                />
-                <ZoomIn className="h-3.5 w-3.5 text-white/80 shrink-0" />
-                <span className="text-xs text-white/80 tabular-nums w-8 text-right">
-                  {hwZoom.toFixed(1)}×
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       {/* ── Scanning controls ────────────────────────────────────────────────── */}
       {scanning && (
         <div className="w-full max-w-[320px] text-center space-y-2 mt-2">
           <p className="text-xs font-medium text-foreground">
-            {isIOS ? "Hold phone 15–25 cm from barcode" : "Point at a barcode"}
+            {isIOS ? "Hold phone 15-25 cm from barcode" : "Point at a barcode"}
           </p>
           <Button variant="outline" size="sm" onClick={stopScanner} className="mt-2">
             <X className="h-3.5 w-3.5 mr-1" /> Cancel
           </Button>
         </div>
       )}
-
-      {/* Hidden canvas used only for older fallback if needed */}
-      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 }
