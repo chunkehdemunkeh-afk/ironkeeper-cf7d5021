@@ -1166,35 +1166,86 @@ export default function WorkoutSession() {
                                     const repLabel = gOverride?.repLabel || gEx.repLabel || "Reps";
                                     const isTimeBased = repLabel === "Sec";
                                     if (!isTimeBased && canTrackWeight) {
+                                      const dn = (gOverride?.name || gEx.name).toLowerCase();
+                                      // Bodyweight toggle — only for exercises that aren't cable-based (e.g. leg raises, not cable crunches)
+                                      const isCableType = ["cable", "pushdown", "push down", "face pull", "facepull", "pallof", "crossover", "straight-arm", "rope"].some(kw => dn.includes(kw));
+                                      // Light/Heavy toggle — standalone cable exercises only
+                                      const isBenchOrMachine = ["lat pull", "pulldown", "pull down", "seated row", "machine row", "machine fly", "pec deck", "t-bar", "t bar", "leg"].some(kw => dn.includes(kw));
+                                      const showLightHeavy = isCableType && !isBenchOrMachine;
+                                      const showBW = !isCableType;
+
+                                      const hasAnyToggle = showBW || showLightHeavy || gExId === "acc-grip1";
+                                      if (!hasAnyToggle) return null;
+
                                       return (
                                         <div className="flex items-center gap-2 ml-auto">
-                                          <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none">
-                                            <Switch
-                                              checked={bodyweightExercises.has(gExId)}
-                                              onCheckedChange={() => setBodyweightExercises(prev => {
+                                          {showBW && (
+                                            <button
+                                              onClick={() => setBodyweightExercises(prev => {
                                                 const next = new Set(prev);
                                                 if (next.has(gExId)) next.delete(gExId);
                                                 else next.add(gExId);
                                                 return next;
                                               })}
-                                              className="h-4 w-7 data-[state=checked]:bg-primary [&>span]:h-3 [&>span]:w-3"
-                                            />
-                                            BW
-                                          </label>
-                                          {gExId === "acc-grip1" && (
-                                            <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none">
-                                              <Switch
-                                                checked={twoHandedExercises.has(gExId)}
-                                                onCheckedChange={() => setTwoHandedExercises(prev => {
+                                              className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all select-none ${
+                                                bodyweightExercises.has(gExId)
+                                                  ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                                                  : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
+                                              }`}
+                                            >
+                                              <div className={`h-1.5 w-1.5 rounded-full transition-colors ${bodyweightExercises.has(gExId) ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                                              BW
+                                            </button>
+                                          )}
+                                          {showLightHeavy && (
+                                            <div className="flex items-center rounded-full bg-muted/50 p-0.5 select-none">
+                                              <button
+                                                onClick={() => heavyStackExercises.has(gExId) && setHeavyStackExercises(prev => {
                                                   const next = new Set(prev);
-                                                  if (next.has(gExId)) next.delete(gExId);
-                                                  else next.add(gExId);
+                                                  next.delete(gExId);
                                                   return next;
                                                 })}
-                                                className="h-4 w-7 data-[state=checked]:bg-primary [&>span]:h-3 [&>span]:w-3"
-                                              />
+                                                className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-all ${
+                                                  !heavyStackExercises.has(gExId)
+                                                    ? "bg-background text-foreground shadow-sm"
+                                                    : "text-muted-foreground"
+                                                }`}
+                                              >
+                                                Light
+                                              </button>
+                                              <button
+                                                onClick={() => !heavyStackExercises.has(gExId) && setHeavyStackExercises(prev => {
+                                                  const next = new Set(prev);
+                                                  next.add(gExId);
+                                                  return next;
+                                                })}
+                                                className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-all ${
+                                                  heavyStackExercises.has(gExId)
+                                                    ? "bg-background text-foreground shadow-sm"
+                                                    : "text-muted-foreground"
+                                                }`}
+                                              >
+                                                Heavy
+                                              </button>
+                                            </div>
+                                          )}
+                                          {gExId === "acc-grip1" && (
+                                            <button
+                                              onClick={() => setTwoHandedExercises(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(gExId)) next.delete(gExId);
+                                                else next.add(gExId);
+                                                return next;
+                                              })}
+                                              className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all select-none ${
+                                                twoHandedExercises.has(gExId)
+                                                  ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                                                  : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
+                                              }`}
+                                            >
+                                              <div className={`h-1.5 w-1.5 rounded-full transition-colors ${twoHandedExercises.has(gExId) ? "bg-primary" : "bg-muted-foreground/30"}`} />
                                               2H
-                                            </label>
+                                            </button>
                                           )}
                                         </div>
                                       );
