@@ -94,20 +94,6 @@ export default function HomeCompleteDay({ date }: Props) {
 
   if (!user || !status) return null;
 
-  // Already completed — show a badge instead of the button
-  if (dayCompleted) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3"
-      >
-        <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
-        <span className="text-sm font-semibold text-green-400">Day Logged</span>
-      </motion.div>
-    );
-  }
-
   const missingItems: { icon: typeof Scale; label: string }[] = [];
   if (!status.weightLogged) missingItems.push({ icon: Scale, label: "Body weight" });
   if (!status.foodLogged) missingItems.push({ icon: Utensils, label: "Nutrition" });
@@ -140,11 +126,28 @@ export default function HomeCompleteDay({ date }: Props) {
         water_goal_ml: status.waterGoalMl,
         weight_kg: status.weightKg,
       });
+    } else {
+      // No goals set — still save what we have with zero goals
+      await saveDailyLog({
+        date: targetDate,
+        calories: Math.round(status.totals.calories),
+        protein_g: status.totals.protein,
+        carbs_g: status.totals.carbs,
+        fat_g: status.totals.fat,
+        water_ml: status.waterMl,
+        calorie_goal: 0,
+        protein_goal_g: 0,
+        carbs_goal_g: 0,
+        fat_goal_g: 0,
+        water_goal_ml: status.waterGoalMl,
+        weight_kg: status.weightKg,
+      });
     }
 
     setDayCompleted(true);
 
     if (status.goals) {
+      // Show the tips summary sheet
       setShowSummary(true);
     } else {
       toast.success("Day completed!");
@@ -153,21 +156,33 @@ export default function HomeCompleteDay({ date }: Props) {
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
-      >
-        <Button
-          onClick={handleComplete}
-          className="w-full rounded-xl gradient-primary py-6 text-sm font-bold text-primary-foreground glow-primary"
+      {/* Button OR badge — never both */}
+      {dayCompleted ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3"
         >
-          <CheckCircle2 className="h-4 w-4 mr-2" />
-          Complete Day
-        </Button>
-      </motion.div>
+          <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+          <span className="text-sm font-semibold text-green-400">Day Logged</span>
+        </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
+          <Button
+            onClick={handleComplete}
+            className="w-full rounded-xl gradient-primary py-6 text-sm font-bold text-primary-foreground glow-primary"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Complete Day
+          </Button>
+        </motion.div>
+      )}
 
-      {/* Missing items warning */}
+      {/* Missing items warning — always in the tree so AnimatePresence works */}
       <AnimatePresence>
         {showWarning && (
           <motion.div
@@ -206,17 +221,10 @@ export default function HomeCompleteDay({ date }: Props) {
               </div>
 
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowWarning(false)}
-                  className="flex-1"
-                >
+                <Button variant="outline" onClick={() => setShowWarning(false)} className="flex-1">
                   Go back &amp; log
                 </Button>
-                <Button
-                  onClick={openSummary}
-                  className="flex-1"
-                >
+                <Button onClick={openSummary} className="flex-1">
                   Complete anyway
                 </Button>
               </div>
@@ -225,7 +233,7 @@ export default function HomeCompleteDay({ date }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Full summary */}
+      {/* Summary sheet — always in the tree, only opens when showSummary is true */}
       {status.goals && (
         <CompleteDaySummary
           open={showSummary}

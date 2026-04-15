@@ -47,6 +47,61 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_logs: {
+        Row: {
+          id: string
+          user_id: string
+          date: string
+          calories: number
+          protein_g: number
+          carbs_g: number
+          fat_g: number
+          water_ml: number
+          calorie_goal: number
+          protein_goal_g: number
+          carbs_goal_g: number
+          fat_goal_g: number
+          water_goal_ml: number
+          weight_kg: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          date: string
+          calories?: number
+          protein_g?: number
+          carbs_g?: number
+          fat_g?: number
+          water_ml?: number
+          calorie_goal?: number
+          protein_goal_g?: number
+          carbs_goal_g?: number
+          fat_goal_g?: number
+          water_goal_ml?: number
+          weight_kg?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          date?: string
+          calories?: number
+          protein_g?: number
+          carbs_g?: number
+          fat_g?: number
+          water_ml?: number
+          calorie_goal?: number
+          protein_goal_g?: number
+          carbs_goal_g?: number
+          fat_goal_g?: number
+          water_goal_ml?: number
+          weight_kg?: number | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+
       body_measurements: {
         Row: {
           body_fat_pct: number | null
