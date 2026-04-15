@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { WORKOUTS, type CompletedWorkout } from "./workout-data";
 import { EXERCISE_SUBSTITUTIONS } from "./exercise-substitutions";
 import { ACCESSORY_ROUTINES, ACCESSORY_SUBSTITUTIONS } from "./accessory-routines";
@@ -456,6 +457,11 @@ export async function saveDailyLog(data: {
       },
       { onConflict: "user_id,date" }
     );
+
+  if (error) {
+    console.error("Error saving daily log:", error);
+    toast.error("Failed to save: " + error.message);
+  }
 
   return !error;
 }
