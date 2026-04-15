@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchDailyLogs, type DailyLog } from "@/lib/cloud-data";
+import { fetchDailyLogs, fetchWorkoutHistory, type DailyLog } from "@/lib/cloud-data";
 import { motion } from "framer-motion";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
-import { Salad, ChevronLeft, ChevronRight, GitCompare } from "lucide-react";
+import { CalendarCheck, ChevronLeft, ChevronRight, GitCompare, Dumbbell } from "lucide-react";
 import { format, subDays, subWeeks, subMonths, subYears, parseISO, startOfMonth, startOfWeek, endOfWeek } from "date-fns";
 
 type Period = "day" | "week" | "month" | "year";
@@ -58,6 +58,12 @@ export default function DailyReviewChart() {
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ["daily-logs", user?.id],
     queryFn: fetchDailyLogs,
+    enabled: !!user,
+  });
+
+  const { data: workouts = [] } = useQuery({
+    queryKey: ["workout-history", user?.id],
+    queryFn: fetchWorkoutHistory,
     enabled: !!user,
   });
 
@@ -160,6 +166,7 @@ export default function DailyReviewChart() {
 
   // ── Day view — single selected date detail ─────────────────────────────────
   const dayLog = period === "day" ? currentLogs[0] ?? null : null;
+  const dayWorkouts = period === "day" ? workouts.filter((w: any) => w.date === selectedDay) : [];
   const canGoPrev = period === "day" && logs.some(l => l.date < selectedDay);
   const canGoNext = period === "day" && selectedDay < today;
 
@@ -172,7 +179,7 @@ export default function DailyReviewChart() {
         animate={{ opacity: 1, y: 0 }}
         className="glass-card rounded-xl p-5 text-center"
       >
-        <Salad className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+        <CalendarCheck className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
         <p className="text-sm text-muted-foreground">No daily logs yet</p>
         <p className="text-xs text-muted-foreground mt-1">Press "Complete Day" on the home screen to start logging</p>
       </motion.div>
@@ -188,8 +195,8 @@ export default function DailyReviewChart() {
       {/* Header row */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <Salad className="h-4 w-4 text-emerald-400" />
-          Daily Nutrition Review
+          <CalendarCheck className="h-4 w-4 text-emerald-400" />
+          Daily Review
         </h3>
 
         {/* Compare toggle (week / month / year only) */}
@@ -267,6 +274,32 @@ export default function DailyReviewChart() {
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>⚖️ Body weight</span>
                   <span className="font-semibold text-foreground">{dayLog.weight_kg}kg</span>
+                </div>
+              )}
+
+              {/* Workouts */}
+              {dayWorkouts.length > 0 && (
+                <div className="pt-2 mt-2 border-t border-border/50">
+                  <p className="text-[10px] uppercase font-semibold tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2">
+                    <Dumbbell className="h-3 w-3" /> Training
+                  </p>
+                  <div className="space-y-1.5">
+                    {dayWorkouts.map((w: any) => (
+                      <div key={w.id} className="flex justify-between items-center bg-secondary/40 rounded-lg p-2.5">
+                        <span className="text-xs font-semibold text-foreground/90 leading-tight">
+                          {w.workout_name}
+                        </span>
+                        <div className="flex gap-2 shrink-0">
+                          <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 bg-background rounded">
+                            {w.exercises_completed} / {w.total_exercises} ex
+                          </span>
+                          <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 bg-background rounded">
+                            {w.duration}m
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

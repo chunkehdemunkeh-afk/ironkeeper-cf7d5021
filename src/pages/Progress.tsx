@@ -170,7 +170,7 @@ export default function Progress() {
           </div>
         </motion.div>
 
-        {/* Daily Nutrition Review */}
+        {/* Daily Review */}
         <DailyReviewChart />
 
         {/* Personal Records */}
