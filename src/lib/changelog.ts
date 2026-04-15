@@ -16,10 +16,10 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-15",
     title: "Updates & Fixes",
     changes: [
-      "Food tracker improvements",
-      "Barcode scanner improvements",
-      "Workout session improvements",
-      "App reliability & performance",
+      "Bodyweight toggle for exercises like leg raises",
+      "Light/Heavy cable toggle only on standalone cable exercises",
+      "Ab superset: correct toggles per exercise type",
+      "Improved iOS barcode scanner reliability",
     ],
   },
   {
