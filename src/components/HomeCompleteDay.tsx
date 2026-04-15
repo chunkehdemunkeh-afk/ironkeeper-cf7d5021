@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, AlertTriangle, X, Scale, Utensils, Droplet } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Scale, Utensils, Droplet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import CompleteDaySummary from "@/components/food/CompleteDaySummary";
+import { saveDailyLog, hasDayBeenCompleted } from "@/lib/cloud-data";
 
 interface DayStatus {
   weightLogged: boolean;
@@ -16,6 +17,7 @@ interface DayStatus {
   goals: { calories: number; protein_g: number; carbs_g: number; fat_g: number } | null;
   waterMl: number;
   waterGoalMl: number;
+  weightKg: number | null;
 }
 
 interface Props {
@@ -28,16 +30,18 @@ export default function HomeCompleteDay({ date }: Props) {
   const [status, setStatus] = useState<DayStatus | null>(null);
   const [showWarning, setShowWarning] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [dayCompleted, setDayCompleted] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     Promise.all([
       supabase
         .from("body_measurements")
-        .select("id")
+        .select("body_weight")
         .eq("user_id", user.id)
         .gte("date", targetDate + "T00:00:00")
         .lte("date", targetDate + "T23:59:59")
+        .order("date", { ascending: false })
         .limit(1),
       supabase
         .from("food_logs")
@@ -54,7 +58,8 @@ export default function HomeCompleteDay({ date }: Props) {
         .select("calories, protein_g, carbs_g, fat_g, water_goal_ml")
         .eq("user_id", user.id)
         .maybeSingle(),
-    ]).then(([weightRes, foodRes, waterRes, goalsRes]) => {
+      hasDayBeenCompleted(targetDate),
+    ]).then(([weightRes, foodRes, waterRes, goalsRes, completed]) => {
       const foods = foodRes.data || [];
       const totals = foods.reduce(
         (a: any, l: any) => ({
@@ -68,20 +73,40 @@ export default function HomeCompleteDay({ date }: Props) {
       const waterEntries = waterRes.data || [];
       const waterMl = waterEntries.reduce((s: number, e: any) => s + e.amount_ml, 0);
       const goals = goalsRes.data as any;
+      const latestWeight = weightRes.data?.[0]?.body_weight ?? null;
 
       setStatus({
         weightLogged: (weightRes.data || []).length > 0,
         foodLogged: foods.length > 0,
         waterLogged: waterMl > 0,
         totals,
-        goals: goals ? { calories: goals.calories, protein_g: goals.protein_g, carbs_g: goals.carbs_g, fat_g: goals.fat_g } : null,
+        goals: goals
+          ? { calories: goals.calories, protein_g: goals.protein_g, carbs_g: goals.carbs_g, fat_g: goals.fat_g }
+          : null,
         waterMl,
         waterGoalMl: goals?.water_goal_ml || 2500,
+        weightKg: latestWeight ? Number(latestWeight) : null,
       });
+
+      setDayCompleted(completed as boolean);
     });
   }, [user, targetDate]);
 
   if (!user || !status) return null;
+
+  // Already completed — show a badge instead of the button
+  if (dayCompleted) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3"
+      >
+        <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+        <span className="text-sm font-semibold text-green-400">Day Logged</span>
+      </motion.div>
+    );
+  }
 
   const missingItems: { icon: typeof Scale; label: string }[] = [];
   if (!status.weightLogged) missingItems.push({ icon: Scale, label: "Body weight" });
@@ -96,8 +121,29 @@ export default function HomeCompleteDay({ date }: Props) {
     }
   };
 
-  const openSummary = () => {
+  const openSummary = async () => {
     setShowWarning(false);
+
+    // Save the snapshot to the database
+    if (status.goals) {
+      await saveDailyLog({
+        date: targetDate,
+        calories: Math.round(status.totals.calories),
+        protein_g: status.totals.protein,
+        carbs_g: status.totals.carbs,
+        fat_g: status.totals.fat,
+        water_ml: status.waterMl,
+        calorie_goal: status.goals.calories,
+        protein_goal_g: status.goals.protein_g,
+        carbs_goal_g: status.goals.carbs_g,
+        fat_goal_g: status.goals.fat_g,
+        water_goal_ml: status.waterGoalMl,
+        weight_kg: status.weightKg,
+      });
+    }
+
+    setDayCompleted(true);
+
     if (status.goals) {
       setShowSummary(true);
     } else {
@@ -136,7 +182,8 @@ export default function HomeCompleteDay({ date }: Props) {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-lg bg-card border-t border-border rounded-t-2xl p-5 pb-8"
+              className="relative w-full max-w-lg bg-card border-t border-border rounded-t-2xl p-5"
+              style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}
             >
               <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
 
@@ -164,7 +211,7 @@ export default function HomeCompleteDay({ date }: Props) {
                   onClick={() => setShowWarning(false)}
                   className="flex-1"
                 >
-                  Go back & log
+                  Go back &amp; log
                 </Button>
                 <Button
                   onClick={openSummary}

@@ -154,7 +154,9 @@ export default function CompleteDaySummary({ open, onClose, totals, goals, water
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-lg bg-card border-t border-border rounded-t-2xl p-5 pb-8 max-h-[85vh] overflow-y-auto"
+            className="relative w-full max-w-lg bg-card border-t border-border rounded-t-2xl p-5 max-h-[85vh] overflow-y-auto"
+              style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}
+
           >
             {/* Handle */}
             <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />

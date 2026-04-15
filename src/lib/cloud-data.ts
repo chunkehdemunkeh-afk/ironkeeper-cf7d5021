@@ -399,3 +399,107 @@ export async function deleteActivityLog(id: string): Promise<boolean> {
 
   return !error;
 }
+
+// ── Daily Logs (Complete Day snapshots) ───────────────────────────────────────
+
+export interface DailyLog {
+  id: string;
+  date: string; // "YYYY-MM-DD"
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  water_ml: number;
+  calorie_goal: number;
+  protein_goal_g: number;
+  carbs_goal_g: number;
+  fat_goal_g: number;
+  water_goal_ml: number;
+  weight_kg: number | null;
+  created_at: string;
+}
+
+export async function saveDailyLog(data: {
+  date: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  water_ml: number;
+  calorie_goal: number;
+  protein_goal_g: number;
+  carbs_goal_g: number;
+  fat_goal_g: number;
+  water_goal_ml: number;
+  weight_kg?: number | null;
+}): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { error } = await supabase
+    .from("daily_logs")
+    .upsert(
+      {
+        user_id: user.id,
+        date: data.date,
+        calories: data.calories,
+        protein_g: data.protein_g,
+        carbs_g: data.carbs_g,
+        fat_g: data.fat_g,
+        water_ml: data.water_ml,
+        calorie_goal: data.calorie_goal,
+        protein_goal_g: data.protein_goal_g,
+        carbs_goal_g: data.carbs_goal_g,
+        fat_goal_g: data.fat_goal_g,
+        water_goal_ml: data.water_goal_ml,
+        weight_kg: data.weight_kg ?? null,
+      },
+      { onConflict: "user_id,date" }
+    );
+
+  return !error;
+}
+
+export async function hasDayBeenCompleted(date: string): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data } = await supabase
+    .from("daily_logs")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("date", date)
+    .maybeSingle();
+
+  return !!data;
+}
+
+export async function fetchDailyLogs(): Promise<DailyLog[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("daily_logs")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("date", { ascending: true });
+
+  if (error || !data) return [];
+
+  return data.map((r: any) => ({
+    id: r.id,
+    date: r.date,
+    calories: r.calories,
+    protein_g: Number(r.protein_g),
+    carbs_g: Number(r.carbs_g),
+    fat_g: Number(r.fat_g),
+    water_ml: r.water_ml,
+    calorie_goal: r.calorie_goal,
+    protein_goal_g: Number(r.protein_goal_g),
+    carbs_goal_g: Number(r.carbs_goal_g),
+    fat_goal_g: Number(r.fat_goal_g),
+    water_goal_ml: r.water_goal_ml,
+    weight_kg: r.weight_kg ? Number(r.weight_kg) : null,
+    created_at: r.created_at,
+  }));
+}

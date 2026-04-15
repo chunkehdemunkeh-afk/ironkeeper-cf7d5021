@@ -4,6 +4,7 @@ import { WORKOUTS, type CompletedWorkout } from "@/lib/workout-data";
 import { BarChart3, Trophy, Calendar, TrendingUp, Dumbbell, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import DailyReviewChart from "@/components/DailyReviewChart";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, CartesianGrid,
@@ -168,6 +169,9 @@ export default function Progress() {
             </ResponsiveContainer>
           </div>
         </motion.div>
+
+        {/* Daily Nutrition Review */}
+        <DailyReviewChart />
 
         {/* Personal Records */}
         <motion.div
