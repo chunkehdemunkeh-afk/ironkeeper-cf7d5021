@@ -56,7 +56,7 @@ export default function DailyReviewChart() {
       if (!user) return {};
       const { data: hData } = await supabase.from("workout_history").select("id, date").eq("user_id", user.id);
       if (!hData || hData.length === 0) return {};
-      const historyToDate = Object.fromEntries(hData.map((h: any) => [h.id, h.date]));
+      const historyToDate = Object.fromEntries(hData.map((h: any) => [h.id, h.date.split("T")[0]]));
       
       const historyIds = Object.keys(historyToDate);
       if (historyIds.length === 0) return {};
@@ -257,10 +257,16 @@ export default function DailyReviewChart() {
         ))}
       </div>
 
-      {/* Bar Chart rendering logic */}
+      {/* Area Chart rendering logic */}
       <div className="h-44 mt-4">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ left: -5, right: 0, bottom: 0, top: 10 }}>
+          <AreaChart data={chartData} margin={{ left: -5, right: 0, bottom: 0, top: 10 }}>
+            <defs>
+              <linearGradient id="metricGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={selectedMetricConfig.color} stopOpacity={selectedMetricConfig.areaOpacity} />
+                <stop offset="95%" stopColor={selectedMetricConfig.color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
             <XAxis dataKey="label" tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 9, fill: "hsl(220, 10%, 55%)" }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} width={42} />
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" vertical={false} />
@@ -271,22 +277,32 @@ export default function DailyReviewChart() {
                 period === "week" ? selectedMetricConfig.label : `Avg ${selectedMetricConfig.label}`
               ]} 
             />
-            <Bar 
+            <Area 
+              type="monotone" 
               dataKey={metric} 
               name={period === "week" ? selectedMetricConfig.label : `Avg ${selectedMetricConfig.label}`} 
-              fill={selectedMetricConfig.color} 
-              radius={[3, 3, 0, 0]} 
+              stroke={selectedMetricConfig.color} 
+              fill="url(#metricGrad)" 
+              strokeWidth={2} 
+              connectNulls 
+              dot={{ r: 4, strokeWidth: 0, fill: selectedMetricConfig.color }}
+              activeDot={{ r: 6, strokeWidth: 0, fill: selectedMetricConfig.color }}
             />
             {compare && (
-              <Bar 
+              <Area 
+                type="monotone" 
                 dataKey={`prev${metric.charAt(0).toUpperCase() + metric.slice(1)}`} 
                 name={period === "week" ? `Prev ${selectedMetricConfig.label}` : `Prev Avg ${selectedMetricConfig.label}`} 
-                fill={selectedMetricConfig.color} 
-                radius={[3, 3, 0, 0]} 
-                opacity={0.4} 
+                stroke={selectedMetricConfig.color} 
+                fill="none" 
+                strokeWidth={1.5} 
+                strokeDasharray="4 2" 
+                opacity={0.5} 
+                connectNulls 
+                dot={{ r: 3, fill: "transparent", stroke: selectedMetricConfig.color }}
               />
             )}
-          </BarChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
 
