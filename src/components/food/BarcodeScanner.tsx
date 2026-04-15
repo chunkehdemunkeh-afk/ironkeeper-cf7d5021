@@ -173,6 +173,7 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
           Html5QrcodeSupportedFormats.UPC_A,
           Html5QrcodeSupportedFormats.UPC_E,
         ],
+        verbose: false,
       });
       scannerRef.current = scanner;
       setScanning(true);
