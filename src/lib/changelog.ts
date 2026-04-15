@@ -12,13 +12,13 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.3",
+    version: "1.6.4",
     date: "2026-04-15",
-    title: "Toggle Improvements",
+    title: "Updates & Fixes",
     changes: [
-      "Bodyweight toggle redesigned as pill button matching app aesthetic",
-      "Light/Heavy toggle now a segmented control with clearer selection",
-      "Light/Heavy restricted to standalone cable exercises only (no lat pulldowns, seated rows, machines)",
+      "Food tracker improvements",
+      "Barcode scanner improvements",
+      "App reliability & performance",
     ],
   },
   {
