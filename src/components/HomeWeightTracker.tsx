@@ -3,19 +3,23 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Scale, TrendingUp, TrendingDown, Minus, Plus, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { format, subDays, startOfWeek, startOfMonth } from "date-fns";
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 type TimeRange = "7d" | "30d" | "90d";
 
-export default function HomeWeightTracker() {
+interface Props {
+  date?: string;
+}
+
+export default function HomeWeightTracker({ date }: Props) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const today = format(new Date(), "yyyy-MM-dd");
+  const targetDate = date || format(new Date(), "yyyy-MM-dd");
 
   const [measurements, setMeasurements] = useState<{ date: string; weight: number }[]>([]);
-  const [todayLogged, setTodayLogged] = useState(false);
+  const [dayLogged, setDayLogged] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [weight, setWeight] = useState("");
   const [saving, setSaving] = useState(false);
@@ -38,66 +42,27 @@ export default function HomeWeightTracker() {
         weight: Number(m.body_weight),
       }));
       setMeasurements(mapped);
-      setTodayLogged(mapped.some((m) => m.date === today));
+      setDayLogged(mapped.some((m) => m.date === targetDate));
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, [user]);
-
-  // Weekly weight trend notification — show once per week
-  useEffect(() => {
-    if (!user || measurements.length < 2) return;
-    const now = new Date();
-    const weekKey = `weight-trend-notif-${user.id}-${format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd")}`;
-    if (sessionStorage.getItem(weekKey)) return;
-
-    const last7 = measurements.filter((m) => m.date >= format(subDays(now, 7), "yyyy-MM-dd"));
-    const prev7Start = format(subDays(now, 14), "yyyy-MM-dd");
-    const prev7End = format(subDays(now, 7), "yyyy-MM-dd");
-    const prev7 = measurements.filter((m) => m.date >= prev7Start && m.date < prev7End);
-
-    if (last7.length < 2 || prev7.length < 1) return;
-
-    const avg = last7.reduce((s, m) => s + m.weight, 0) / last7.length;
-    const prevAvg = prev7.reduce((s, m) => s + m.weight, 0) / prev7.length;
-    const diff = avg - prevAvg;
-
-    sessionStorage.setItem(weekKey, "1");
-
-    const timer = setTimeout(() => {
-      if (Math.abs(diff) < 0.05) {
-        toast("⚖️ Weight holding steady", {
-          description: `Your 7-day avg is ${avg.toFixed(1)} kg — unchanged from last week. Consistency is key!`,
-          duration: 7000,
-        });
-      } else if (diff > 0) {
-        toast("📈 Weight trending up", {
-          description: `Your 7-day avg is ${avg.toFixed(1)} kg (+${diff.toFixed(1)} kg vs last week). ${diff > 0.5 ? "Check your calorie intake if this isn't planned." : "Small fluctuations are normal."}`,
-          duration: 7000,
-        });
-      } else {
-        toast("📉 Weight trending down", {
-          description: `Your 7-day avg is ${avg.toFixed(1)} kg (${diff.toFixed(1)} kg vs last week). ${diff < -0.5 ? "Great progress if cutting! Make sure you're fuelling training." : "Staying on track!"}`,
-          duration: 7000,
-        });
-      }
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [user, measurements]);
+  }, [user, targetDate]);
 
   const handleLog = async () => {
     if (!weight || !user) return;
     setSaving(true);
+    // Use target date for the measurement
+    const dateObj = new Date(targetDate + "T12:00:00");
     const { error } = await supabase.from("body_measurements").insert({
       user_id: user.id,
       body_weight: Number(weight),
+      date: dateObj.toISOString(),
     });
     setSaving(false);
     if (!error) {
-      toast.success("Weight logged! ⚖️");
+      toast.success("Weight logged!");
       setWeight("");
       setShowInput(false);
       fetchData();
@@ -148,7 +113,7 @@ export default function HomeWeightTracker() {
           Body Weight
         </p>
         <div className="flex items-center gap-2">
-          {!todayLogged && !showInput && (
+          {!dayLogged && !showInput && (
             <button
               onClick={() => setShowInput(true)}
               className="flex items-center gap-1 text-[10px] font-semibold text-primary bg-primary/10 rounded-full px-2.5 py-1"
@@ -184,6 +149,7 @@ export default function HomeWeightTracker() {
                 placeholder="e.g. 75.2"
                 autoFocus
                 className="flex-1 h-9 rounded-lg bg-muted/50 border border-border/50 px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/50"
+                style={{ fontSize: "16px" }}
                 onKeyDown={(e) => e.key === "Enter" && handleLog()}
               />
               <button
@@ -200,17 +166,14 @@ export default function HomeWeightTracker() {
                 ✕
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1.5">
-              ⏰ Weigh yourself every morning for the most accurate average
-            </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Today logged badge */}
-      {todayLogged && (
+      {/* Day logged badge */}
+      {dayLogged && (
         <div className="flex items-center gap-1.5 mb-3 text-[10px] text-green-400 font-medium">
-          <Scale className="h-3 w-3" /> Today's weight logged ✓
+          <Scale className="h-3 w-3" /> Weight logged for this day
         </div>
       )}
 
@@ -255,8 +218,8 @@ export default function HomeWeightTracker() {
       {/* Mini bar chart */}
       {filtered.length > 0 ? (
         <div className="flex items-end gap-[2px] h-12">
-          {filtered.map((m, i) => {
-            const pct = ((m.weight - minW) / wRange) * 70 + 30; // 30-100% height
+          {filtered.map((m) => {
+            const pct = ((m.weight - minW) / wRange) * 70 + 30;
             return (
               <div
                 key={m.date}
@@ -279,9 +242,9 @@ export default function HomeWeightTracker() {
       )}
 
       {/* Encouragement if not logging daily */}
-      {!todayLogged && measurements.length > 0 && (
+      {!dayLogged && measurements.length > 0 && (
         <p className="text-[10px] text-amber-400/80 mt-2 text-center">
-          💡 Log your weight daily for a more accurate weekly average
+          Log your weight daily for a more accurate weekly average
         </p>
       )}
     </motion.div>

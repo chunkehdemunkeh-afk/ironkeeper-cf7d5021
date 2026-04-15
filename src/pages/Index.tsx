@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getGreeting } from "@/lib/workout-data";
 import { useAuth } from "@/hooks/useAuth";
 import WeekStrip from "@/components/WeekStrip";
@@ -9,8 +9,10 @@ import HomeDailySummary from "@/components/HomeDailySummary";
 import HomeWeightTracker from "@/components/HomeWeightTracker";
 import HomeCompleteDay from "@/components/HomeCompleteDay";
 import { isGKSplit } from "@/lib/user-preferences";
+import { format, subDays, addDays, isToday } from "date-fns";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -18,6 +20,27 @@ const Index = () => {
   const { profile, user } = useAuth();
   const displayName = profile?.display_name?.split(" ")[0] || "Athlete";
   const gkMode = user ? isGKSplit(user.id) : false;
+
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [slideDir, setSlideDir] = useState(0); // -1 left, 1 right
+
+  const dateStr = format(selectedDate, "yyyy-MM-dd");
+  const isCurrentDay = isToday(selectedDate);
+  const minDate = subDays(new Date(), 6);
+  const canGoBack = selectedDate > minDate;
+  const canGoForward = !isCurrentDay;
+
+  const goBack = () => {
+    if (!canGoBack) return;
+    setSlideDir(-1);
+    setSelectedDate((d) => subDays(d, 1));
+  };
+
+  const goForward = () => {
+    if (!canGoForward) return;
+    setSlideDir(1);
+    setSelectedDate((d) => addDays(d, 1));
+  };
 
   // Remind GK users to do daily stretches if not yet completed
   useEffect(() => {
@@ -43,13 +66,16 @@ const Index = () => {
     return () => clearTimeout(timer);
   }, [user, gkMode]);
 
-  const today = new Date();
-  const dateStr = today.toLocaleDateString("en-GB", {
+  const headerDate = selectedDate.toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
+
+  const shortDateLabel = isCurrentDay
+    ? "Today"
+    : format(selectedDate, "EEE, d MMM");
 
   return (
     <div className="min-h-screen bg-background safe-bottom">
@@ -62,7 +88,7 @@ const Index = () => {
           <h1 className="font-display text-2xl font-bold">
             {getGreeting()}, <span className="text-gradient-primary">{displayName}!</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{dateStr}</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{headerDate}</p>
         </motion.div>
 
         {/* Stats */}
@@ -76,21 +102,51 @@ const Index = () => {
           <WeekStrip />
         </div>
 
-        {/* Next session */}
-        <NextSessionCard />
+        {/* Next session — only show on today */}
+        {isCurrentDay && <NextSessionCard />}
 
-        {/* Daily nutrition & water summary */}
-        <HomeDailySummary />
+        {/* Date navigation for daily cards */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={goBack}
+            disabled={!canGoBack}
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <p className="text-sm font-semibold text-foreground">{shortDateLabel}</p>
+          <button
+            onClick={goForward}
+            disabled={!canGoForward}
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
 
-        {/* Body weight tracker */}
-        <HomeWeightTracker />
+        {/* Date-aware cards with slide animation */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={dateStr}
+            initial={{ x: slideDir * 60, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: slideDir * -60, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="space-y-5"
+          >
+            {/* Daily nutrition & water summary */}
+            <HomeDailySummary date={dateStr} />
 
-        {/* Pre-workout stretches — adapts to the user's next workout */}
-        <DailyStretchCard />
+            {/* Body weight tracker */}
+            <HomeWeightTracker date={dateStr} />
 
-        {/* Complete Day */}
-        <HomeCompleteDay />
+            {/* Complete Day */}
+            <HomeCompleteDay date={dateStr} />
+          </motion.div>
+        </AnimatePresence>
 
+        {/* Pre-workout stretches — only show on today */}
+        {isCurrentDay && <DailyStretchCard />}
       </div>
     </div>
   );
