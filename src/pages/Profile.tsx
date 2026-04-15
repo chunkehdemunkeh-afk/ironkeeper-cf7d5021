@@ -97,11 +97,15 @@ export default function Profile() {
         {/* Stats grid */}
         <div className="grid grid-cols-3 gap-2">
           {[
-            { icon: Flame,  label: "Streak",   value: streak > 0 ? `${streak} week` : "—", color: streak > 0 ? "text-primary" : "text-muted-foreground" },
-            { icon: Target, label: "Workouts", value: totalWorkouts, color: "text-success" },
-            { icon: Award,  label: "Minutes",  value: totalMinutes, color: "text-foreground" },
-          ].map(({ icon: Icon, label, value, color }) => (
-            <div key={label} className="glass-card rounded-xl p-3 text-center">
+            { icon: Flame,  label: "Streak",   value: streak > 0 ? `${streak} week` : "—", color: streak > 0 ? "text-primary" : "text-muted-foreground", onClick: undefined },
+            { icon: Target, label: "Workouts", value: totalWorkouts, color: "text-success", onClick: () => navigate("/history") },
+            { icon: Award,  label: "Minutes",  value: totalMinutes, color: "text-foreground", onClick: undefined },
+          ].map(({ icon: Icon, label, value, color, onClick }) => (
+            <div
+              key={label}
+              className={`glass-card rounded-xl p-3 text-center ${onClick ? "cursor-pointer active:scale-[0.97] transition-transform" : ""}`}
+              onClick={onClick}
+            >
               <Icon className={`h-4 w-4 mx-auto mb-1 ${color}`} />
               <p className={`font-display text-xl font-bold ${color}`}>{value}</p>
               <p className="text-[10px] text-muted-foreground font-medium">{label}</p>
