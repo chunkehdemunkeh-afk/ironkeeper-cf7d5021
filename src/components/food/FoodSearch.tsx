@@ -222,6 +222,27 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
   const handleLog = async () => {
     if (!user || !selected) return;
     setSaving(true);
+
+    // If extended fields are still null (background fetch may not have completed),
+    // do a synchronous fetch now before saving so we don't lose the data.
+    let resolvedSugar = baseSugar;
+    let resolvedFibre = baseFibre;
+    let resolvedSatFat = baseSatFat;
+    let resolvedSalt = baseSalt;
+    if (
+      selected.foodId &&
+      resolvedSugar == null && resolvedFibre == null &&
+      resolvedSatFat == null && resolvedSalt == null
+    ) {
+      const ext = await fetchExtendedNutrition(selected.foodId);
+      if (ext) {
+        if (ext.sugar != null) resolvedSugar = ext.sugar;
+        if (ext.fibre != null) resolvedFibre = ext.fibre;
+        if (ext.saturatedFat != null) resolvedSatFat = ext.saturatedFat;
+        if (ext.salt != null) resolvedSalt = ext.salt;
+      }
+    }
+
     const qty = Math.max(0.1, parseFloat(servings) || 1);
     const multiplier = (servingGrams / 100) * qty;
     const mul1 = (v: number | null) => v != null ? Math.round(v * multiplier * 10) / 10 : null;
@@ -234,10 +255,10 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
       protein_g: Math.round(basePro * multiplier * 10) / 10,
       carbs_g: Math.round(baseCarb * multiplier * 10) / 10,
       fat_g: Math.round(baseFat * multiplier * 10) / 10,
-      sugar_g: mul1(baseSugar),
-      fibre_g: mul1(baseFibre),
-      saturated_fat_g: mul1(baseSatFat),
-      salt_g: mul1(baseSalt),
+      sugar_g: mul1(resolvedSugar),
+      fibre_g: mul1(resolvedFibre),
+      saturated_fat_g: mul1(resolvedSatFat),
+      salt_g: mul1(resolvedSalt),
       barcode: selected.barcode || null,
     };
 
