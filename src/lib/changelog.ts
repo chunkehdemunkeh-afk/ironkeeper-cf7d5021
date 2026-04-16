@@ -12,15 +12,12 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.23",
+    version: "1.6.24",
     date: "2026-04-16",
-    title: "Nutrition Updates",
+    title: "Updates & Fixes",
     changes: [
-      "Meal cards are now expandable — tap to see a full macro breakdown per meal",
-      "Favourites now open for editing before logging so you can adjust amounts",
-      "Barcode scanner opens the camera immediately — no extra tap needed",
-      "Nutrition log now defaults to per-serving size instead of per 100g",
-      "Remaining calories label is now clearly shown above the figure",
+      "Fix auto-changelog: use last auto-update commit as baseline, drop file-map fallbacks",
+      "Fix changelog: deduplicate entries, each version lists only new changes",
     ],
   },
   {
