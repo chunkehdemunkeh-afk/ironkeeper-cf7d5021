@@ -363,90 +363,111 @@ export default function FoodTracker() {
                 {/* ── Expanded content ───────────────────────────────────────── */}
                 {isExpanded && (
                   <>
-                    {/* Full nutrition breakdown */}
-                    {mealLogs.length > 0 && (
-                      <div className="border-t border-border bg-secondary/20 px-3 py-3 space-y-3">
-                        {/* Primary macros with goal progress */}
-                        <div className="grid grid-cols-4 gap-2">
+                    {mealLogs.length > 0 ? (
+                      <>
+                        {/* Goal progress bars */}
+                        <div className="border-t border-border px-3 py-3 space-y-2 bg-secondary/20">
                           {[
                             { label: "Calories", value: Math.round(mealCals),  unit: "kcal", goal: goals?.calories ?? 0, color: "bg-primary" },
                             { label: "Protein",  value: Math.round(mealPro),   unit: "g",    goal: goals?.protein_g ?? 0, color: "bg-blue-400" },
                             { label: "Carbs",    value: Math.round(mealCarbs), unit: "g",    goal: goals?.carbs_g ?? 0,   color: "bg-amber-400" },
                             { label: "Fat",      value: Math.round(mealFat),   unit: "g",    goal: goals?.fat_g ?? 0,     color: "bg-rose-400" },
                           ].map((m) => (
-                            <div key={m.label} className="text-center">
-                              <p className="text-[10px] text-muted-foreground mb-1">{m.label}</p>
-                              <p className="text-sm font-bold leading-none">
-                                {m.value}<span className="text-[10px] font-normal text-muted-foreground ml-0.5">{m.unit}</span>
-                              </p>
+                            <div key={m.label}>
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-muted-foreground">{m.label}</span>
+                                <span className="font-medium">
+                                  {m.value}{m.unit === "kcal" ? "" : "g"}
+                                  {m.goal > 0 && <span className="text-muted-foreground font-normal"> / {m.goal}{m.unit === "kcal" ? " kcal" : "g"}</span>}
+                                </span>
+                              </div>
                               {m.goal > 0 && (
-                                <>
-                                  <div className="mt-1.5 h-1 bg-secondary rounded-full overflow-hidden">
-                                    <div className={`h-full rounded-full ${m.color} transition-all duration-500`}
-                                      style={{ width: `${Math.min(100, (m.value / m.goal) * 100)}%` }} />
-                                  </div>
-                                  <p className="text-[9px] text-muted-foreground mt-0.5">{Math.round((m.value / m.goal) * 100)}%</p>
-                                </>
+                                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${m.color} transition-all duration-500`}
+                                    style={{ width: `${Math.min(100, (m.value / m.goal) * 100)}%` }} />
+                                </div>
                               )}
                             </div>
                           ))}
                         </div>
 
-                        {/* Extended nutrition (sugar, sat fat, fibre, salt) */}
-                        {hasExtended && (
-                          <>
-                            <div className="border-t border-border/50" />
-                            <div className="grid grid-cols-4 gap-2">
-                              {[
-                                { label: "Sugar",    value: mealSugar,  color: "text-amber-300" },
-                                { label: "Sat Fat",  value: mealSatFat, color: "text-rose-300" },
-                                { label: "Fibre",    value: mealFibre,  color: "text-green-400" },
-                                { label: "Salt",     value: mealSalt,   color: "text-slate-300" },
-                              ].map((m) => (
-                                <div key={m.label} className="text-center">
-                                  <p className="text-[10px] text-muted-foreground mb-1">{m.label}</p>
-                                  <p className={`text-sm font-bold leading-none ${m.color}`}>
-                                    {m.value > 0 ? m.value.toFixed(1) : "—"}
-                                    {m.value > 0 && <span className="text-[10px] font-normal text-muted-foreground ml-0.5">g</span>}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
+                        {/* Nutrition Facts label */}
+                        <div className="border-t border-border px-3 py-3 space-y-0">
+                          <p className="text-xs font-bold mb-2">Nutrition Facts</p>
 
-                    {/* Food items with edit/delete */}
-                    {mealLogs.length > 0 ? (
-                      <div className="border-t border-border">
-                        {mealLogs.map((log) => (
-                          <div
-                            key={log.id}
-                            className="flex items-center justify-between px-3 py-2.5 border-b border-border/50 last:border-0 cursor-pointer active:bg-secondary/50 transition-colors"
-                            onClick={() => {
-                              setEditingLog({ id: log.id, mealType: meal.type, log });
-                              setSearchMeal(meal.type);
-                            }}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-medium truncate">{log.food_name}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {log.serving_qty} × {log.serving_size || "100g"}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-xs font-semibold text-primary">{Math.round(log.calories)} kcal</span>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); deleteLog(log.id); }}
-                                className="text-muted-foreground hover:text-destructive transition-colors"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
-                            </div>
+                          {/* Calories */}
+                          <div className="flex justify-between py-1.5 border-b border-border/40">
+                            <span className="text-xs font-bold">Calories</span>
+                            <span className="text-xs font-bold">{Math.round(mealCals)} kcal</span>
                           </div>
-                        ))}
-                      </div>
+
+                          {/* Protein */}
+                          <div className="flex justify-between py-1.5 border-b border-border/40">
+                            <span className="text-xs font-bold">Protein</span>
+                            <span className="text-xs font-bold">{mealPro.toFixed(1)} g</span>
+                          </div>
+
+                          {/* Carbs block */}
+                          <div className="flex justify-between py-1.5 border-b border-border/40">
+                            <span className="text-xs font-bold">Carbs</span>
+                            <span className="text-xs font-bold">{mealCarbs.toFixed(1)} g</span>
+                          </div>
+                          <div className="flex justify-between py-1 border-b border-border/30 pl-4">
+                            <span className="text-xs text-muted-foreground">Fibre</span>
+                            <span className="text-xs text-muted-foreground">{hasExtended && mealFibre > 0 ? `${mealFibre.toFixed(1)} g` : "—"}</span>
+                          </div>
+                          <div className="flex justify-between py-1 border-b border-border/40 pl-4">
+                            <span className="text-xs text-muted-foreground">of which Sugars</span>
+                            <span className="text-xs text-muted-foreground">{hasExtended && mealSugar > 0 ? `${mealSugar.toFixed(1)} g` : "—"}</span>
+                          </div>
+
+                          {/* Fat block */}
+                          <div className="flex justify-between py-1.5 border-b border-border/40">
+                            <span className="text-xs font-bold">Total Fat</span>
+                            <span className="text-xs font-bold">{mealFat.toFixed(1)} g</span>
+                          </div>
+                          <div className="flex justify-between py-1 border-b border-border/40 pl-4">
+                            <span className="text-xs text-muted-foreground">of which Saturates</span>
+                            <span className="text-xs text-muted-foreground">{hasExtended && mealSatFat > 0 ? `${mealSatFat.toFixed(1)} g` : "—"}</span>
+                          </div>
+
+                          {/* Salt */}
+                          <div className="flex justify-between py-1.5">
+                            <span className="text-xs font-bold">Salt</span>
+                            <span className="text-xs font-bold">{hasExtended && mealSalt > 0 ? `${mealSalt.toFixed(2)} g` : "—"}</span>
+                          </div>
+                        </div>
+
+                        {/* Food items with edit/delete */}
+                        <div className="border-t-4 border-border">
+                          {mealLogs.map((log) => (
+                            <div
+                              key={log.id}
+                              className="flex items-center justify-between px-3 py-2.5 border-b border-border/50 last:border-0 cursor-pointer active:bg-secondary/50 transition-colors"
+                              onClick={() => {
+                                setEditingLog({ id: log.id, mealType: meal.type, log });
+                                setSearchMeal(meal.type);
+                              }}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-medium truncate">{log.food_name}</p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  {log.serving_qty} × {log.serving_size || "100g"}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-xs font-semibold text-primary">{Math.round(log.calories)} kcal</span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); deleteLog(log.id); }}
+                                  className="text-muted-foreground hover:text-destructive transition-colors"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     ) : (
                       <div className="border-t border-border px-3 py-4 text-center text-xs text-muted-foreground">
                         Nothing logged yet — tap <strong>Add</strong> to get started
