@@ -208,6 +208,7 @@ export default function WorkoutSession() {
   const [exerciseOverrides, setExerciseOverrides] = useState<Record<string, { name: string; notes?: string; targetMuscle: string; trackWeight?: boolean; repLabel?: string; weightLabel?: string; substituteId?: string }>>({});
   // Substitutions used in the PREVIOUS session for this workout (for visual cue)
   const [lastSubstitutions, setLastSubstitutions] = useState<Record<string, { subName: string; subId: string }>>({}); 
+  const [cableAttachments, setCableAttachments] = useState<Record<string, string>>({});
   // Get the effective exercise ID for data lookups (substitute ID if swapped, otherwise original)
   const getEffectiveExId = useCallback((originalId: string) => {
     const base = exerciseOverrides[originalId]?.substituteId || originalId;
@@ -226,7 +227,6 @@ export default function WorkoutSession() {
   const [weightDownSuggestions, setWeightDownSuggestions] = useState<Record<string, number[]>>({});
   const [addedAccessories, setAddedAccessories] = useState<string[]>([]);
   const [bodyweightExercises, setBodyweightExercises] = useState<Set<string>>(new Set());
-  const [cableAttachments, setCableAttachments] = useState<Record<string, string>>({});
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const autoSaveKey = workout ? `workout-autosave-${workout.id}` : null;
 
@@ -992,104 +992,105 @@ export default function WorkoutSession() {
                           return (
                             <>
                               {!isTimeBased && (override?.trackWeight ?? ex.trackWeight) !== false && (
-                                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                  {/* Bodyweight toggle */}
-                                  <button
-                                    onClick={() => setBodyweightExercises(prev => {
-                                      const next = new Set(prev);
-                                      if (next.has(ex.id)) next.delete(ex.id);
-                                      else next.add(ex.id);
-                                      return next;
-                                    })}
-                                    className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all select-none ${
-                                      isBW
-                                        ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                                        : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
-                                    }`}
-                                  >
-                                    <div className={`h-2 w-2 rounded-full transition-colors ${isBW ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                                    Bodyweight
-                                  </button>
-                                  {/* 2 Handed toggle */}
-                                  {ex.id === "acc-grip1" && (
+                                <>
+                                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                    {/* Bodyweight toggle */}
                                     <button
-                                      onClick={() => setTwoHandedExercises(prev => {
+                                      onClick={() => setBodyweightExercises(prev => {
                                         const next = new Set(prev);
                                         if (next.has(ex.id)) next.delete(ex.id);
                                         else next.add(ex.id);
                                         return next;
                                       })}
                                       className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all select-none ${
-                                        twoHandedExercises.has(ex.id)
+                                        isBW
                                           ? "bg-primary/15 text-primary ring-1 ring-primary/30"
                                           : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
                                       }`}
                                     >
-                                      <div className={`h-2 w-2 rounded-full transition-colors ${twoHandedExercises.has(ex.id) ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                                      2 Handed
+                                      <div className={`h-2 w-2 rounded-full transition-colors ${isBW ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                                      Bodyweight
                                     </button>
-                                  )}
-                                  {/* Light/Heavy toggle — standalone cable exercises only (no benches, lat pulldowns, seated rows, machines) */}
-                                  {(() => {
-                                    const dn = displayName.toLowerCase();
-                                    const isCableType = ["cable", "pushdown", "push down", "face pull", "facepull", "pallof", "crossover", "straight-arm", "rope"].some(kw => dn.includes(kw));
-                                    const isBenchOrMachine = ["lat pull", "pulldown", "pull down", "seated row", "machine row", "machine fly", "pec deck", "t-bar", "t bar", "leg"].some(kw => dn.includes(kw));
-                                    return isCableType && !isBenchOrMachine;
-                                  })() && (
-                                    <div className="flex items-center rounded-full bg-muted/50 p-0.5 select-none">
+                                    {/* 2 Handed toggle */}
+                                    {ex.id === "acc-grip1" && (
                                       <button
-                                        onClick={() => heavyStackExercises.has(ex.id) && setHeavyStackExercises(prev => {
+                                        onClick={() => setTwoHandedExercises(prev => {
                                           const next = new Set(prev);
-                                          next.delete(ex.id);
+                                          if (next.has(ex.id)) next.delete(ex.id);
+                                          else next.add(ex.id);
                                           return next;
                                         })}
-                                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-all ${
-                                          !heavyStackExercises.has(ex.id)
-                                            ? "bg-background text-foreground shadow-sm"
-                                            : "text-muted-foreground"
-                                        }`}
-                                      >
-                                        Light
-                                      </button>
-                                      <button
-                                        onClick={() => !heavyStackExercises.has(ex.id) && setHeavyStackExercises(prev => {
-                                          const next = new Set(prev);
-                                          next.add(ex.id);
-                                          return next;
-                                        })}
-                                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-all ${
-                                          heavyStackExercises.has(ex.id)
-                                            ? "bg-background text-foreground shadow-sm"
-                                            : "text-muted-foreground"
-                                        }`}
-                                      >
-                                        Heavy
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                                {/* Attachment selector — all cable / lat machine exercises */}
-                                {isCableAttachmentExercise(displayName) && (
-                                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
-                                    <span className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wide shrink-0">Attachment</span>
-                                    {CABLE_ATTACHMENTS.map((att) => (
-                                      <button
-                                        key={att}
-                                        onClick={() => setCableAttachments(prev => ({
-                                          ...prev,
-                                          [ex.id]: prev[ex.id] === att ? "" : att,
-                                        }))}
-                                        className={`flex-none rounded-full px-2.5 py-1 text-[11px] font-medium transition-all select-none whitespace-nowrap ${
-                                          cableAttachments[ex.id] === att
+                                        className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all select-none ${
+                                          twoHandedExercises.has(ex.id)
                                             ? "bg-primary/15 text-primary ring-1 ring-primary/30"
                                             : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
                                         }`}
                                       >
-                                        {att}
+                                        <div className={`h-2 w-2 rounded-full transition-colors ${twoHandedExercises.has(ex.id) ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                                        2 Handed
                                       </button>
-                                    ))}
+                                    )}
+                                    {/* Light/Heavy toggle — standalone cable exercises only (no benches, lat pulldowns, seated rows, machines) */}
+                                    {(() => {
+                                      const dn = displayName.toLowerCase();
+                                      const isCableType = ["cable", "pushdown", "push down", "face pull", "facepull", "pallof", "crossover", "straight-arm", "rope"].some(kw => dn.includes(kw));
+                                      const isBenchOrMachine = ["lat pull", "pulldown", "pull down", "seated row", "machine row", "machine fly", "pec deck", "t-bar", "t bar", "leg"].some(kw => dn.includes(kw));
+                                      return isCableType && !isBenchOrMachine;
+                                    })() && (
+                                      <div className="flex items-center rounded-full bg-muted/50 p-0.5 select-none">
+                                        <button
+                                          onClick={() => heavyStackExercises.has(ex.id) && setHeavyStackExercises(prev => {
+                                            const next = new Set(prev);
+                                            next.delete(ex.id);
+                                            return next;
+                                          })}
+                                          className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-all ${
+                                            !heavyStackExercises.has(ex.id)
+                                              ? "bg-background text-foreground shadow-sm"
+                                              : "text-muted-foreground"
+                                          }`}
+                                        >
+                                          Light
+                                        </button>
+                                        <button
+                                          onClick={() => !heavyStackExercises.has(ex.id) && setHeavyStackExercises(prev => {
+                                            const next = new Set(prev);
+                                            next.add(ex.id);
+                                            return next;
+                                          })}
+                                          className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-all ${
+                                            heavyStackExercises.has(ex.id)
+                                              ? "bg-background text-foreground shadow-sm"
+                                              : "text-muted-foreground"
+                                          }`}
+                                        >
+                                          Heavy
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
-                                )}
+                                  {isCableAttachmentExercise(displayName) && (
+                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                                      <span className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wide shrink-0">Attachment</span>
+                                      {CABLE_ATTACHMENTS.map((att) => (
+                                        <button
+                                          key={att}
+                                          onClick={() => setCableAttachments(prev => ({
+                                            ...prev,
+                                            [ex.id]: prev[ex.id] === att ? "" : att,
+                                          }))}
+                                          className={`flex-none rounded-full px-2.5 py-1 text-[11px] font-medium transition-all select-none whitespace-nowrap ${
+                                            cableAttachments[ex.id] === att
+                                              ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                                              : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
+                                          }`}
+                                        >
+                                          {att}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </>
                               )}
                               <div className={`grid ${isTimeBased ? "grid-cols-[28px_1fr_36px]" : showWeight ? "grid-cols-[28px_1fr_1fr_36px]" : "grid-cols-[28px_1fr_36px]"} gap-x-1.5 items-center text-[10px] text-muted-foreground font-medium uppercase tracking-wider`}>
                                 <span className="text-center">Set</span>
