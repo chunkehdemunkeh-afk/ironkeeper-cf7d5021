@@ -22,6 +22,10 @@ interface SavedFood {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  sugar_g?: number | null;
+  fibre_g?: number | null;
+  saturated_fat_g?: number | null;
+  salt_g?: number | null;
   barcode: string | null;
 }
 
@@ -35,6 +39,10 @@ export interface EditingLog {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  sugar_g?: number | null;
+  fibre_g?: number | null;
+  saturated_fat_g?: number | null;
+  salt_g?: number | null;
   barcode: string | null;
 }
 
@@ -57,6 +65,11 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
   const [editProtein, setEditProtein] = useState("");
   const [editCarbs, setEditCarbs] = useState("");
   const [editFat, setEditFat] = useState("");
+  // Extended nutrition — per 100g, null when not available
+  const [baseSugar, setBaseSugar] = useState<number | null>(null);
+  const [baseFibre, setBaseFibre] = useState<number | null>(null);
+  const [baseSatFat, setBaseSatFat] = useState<number | null>(null);
+  const [baseSalt, setBaseSalt] = useState<number | null>(null);
   const [servings, setServings] = useState("1");
   const [servingGrams, setServingGrams] = useState(100);
   const [saving, setSaving] = useState(false);
@@ -141,11 +154,17 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
     const storedGrams = parseInt(editingLog.serving_size || "100") || 100;
     const storedQty = editingLog.serving_qty || 1;
     const storedMultiplier = (storedGrams / 100) * storedQty;
+    const rev = (v: number | null | undefined) =>
+      (v != null && storedMultiplier > 0) ? Math.round((v / storedMultiplier) * 10) / 10 : null;
     setSelected(food);
     setEditCalories(String(Math.round((editingLog.calories / storedMultiplier) * 10) / 10));
     setEditProtein(String(Math.round((editingLog.protein_g / storedMultiplier) * 10) / 10));
     setEditCarbs(String(Math.round((editingLog.carbs_g / storedMultiplier) * 10) / 10));
     setEditFat(String(Math.round((editingLog.fat_g / storedMultiplier) * 10) / 10));
+    setBaseSugar(rev(editingLog.sugar_g));
+    setBaseFibre(rev(editingLog.fibre_g));
+    setBaseSatFat(rev(editingLog.saturated_fat_g));
+    setBaseSalt(rev(editingLog.salt_g));
     setServingGrams(storedGrams);
     setServings(String(storedQty));
   }, [open, editingLog]);
@@ -174,6 +193,10 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
     setEditProtein(String(Math.round(food.protein * 10) / 10));
     setEditCarbs(String(Math.round(food.carbs * 10) / 10));
     setEditFat(String(Math.round(food.fat * 10) / 10));
+    setBaseSugar(food.sugar ?? null);
+    setBaseFibre(food.fibre ?? null);
+    setBaseSatFat(food.saturatedFat ?? null);
+    setBaseSalt(food.salt ?? null);
     setServings("1");
     // Default to per-serving when the food has a known serving size, otherwise 100g
     setServingGrams(food.servingWeightG ?? 100);
@@ -190,6 +213,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
     setSaving(true);
     const qty = Math.max(0.1, parseFloat(servings) || 1);
     const multiplier = (servingGrams / 100) * qty;
+    const mul1 = (v: number | null) => v != null ? Math.round(v * multiplier * 10) / 10 : null;
     const foodData = {
       food_name: selected.name,
       brand: selected.brand || null,
@@ -199,6 +223,10 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
       protein_g: Math.round(basePro * multiplier * 10) / 10,
       carbs_g: Math.round(baseCarb * multiplier * 10) / 10,
       fat_g: Math.round(baseFat * multiplier * 10) / 10,
+      sugar_g: mul1(baseSugar),
+      fibre_g: mul1(baseFibre),
+      saturated_fat_g: mul1(baseSatFat),
+      salt_g: mul1(baseSalt),
       barcode: selected.barcode || null,
     };
 
@@ -257,7 +285,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
     // Stay on search for more additions
   };
 
-  const toggleFavourite = async (food: { name: string; brand?: string | null; servingSize?: string | null; calories: number; protein: number; carbs: number; fat: number; barcode?: string | null }) => {
+  const toggleFavourite = async (food: { name: string; brand?: string | null; servingSize?: string | null; calories: number; protein: number; carbs: number; fat: number; sugar?: number | null; fibre?: number | null; saturatedFat?: number | null; salt?: number | null; barcode?: string | null }) => {
     if (!user) return;
     const key = food.name.toLowerCase();
     if (favouriteNames.has(key)) {
@@ -278,6 +306,10 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
         protein_g: Math.round(food.protein * 10) / 10,
         carbs_g: Math.round(food.carbs * 10) / 10,
         fat_g: Math.round(food.fat * 10) / 10,
+        sugar_g: food.sugar ?? null,
+        fibre_g: food.fibre ?? null,
+        saturated_fat_g: food.saturatedFat ?? null,
+        salt_g: food.salt ?? null,
         barcode: food.barcode || null,
       });
       if (error) {
@@ -285,7 +317,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
         return;
       }
       setFavouriteNames((prev) => new Set(prev).add(key));
-      setFavourites((prev) => [{ food_name: food.name, brand: food.brand || null, serving_size: food.servingSize || "100g", serving_qty: 1, calories: Math.round(food.calories), protein_g: Math.round(food.protein * 10) / 10, carbs_g: Math.round(food.carbs * 10) / 10, fat_g: Math.round(food.fat * 10) / 10, barcode: food.barcode || null }, ...prev]);
+      setFavourites((prev) => [{ food_name: food.name, brand: food.brand || null, serving_size: food.servingSize || "100g", serving_qty: 1, calories: Math.round(food.calories), protein_g: Math.round(food.protein * 10) / 10, carbs_g: Math.round(food.carbs * 10) / 10, fat_g: Math.round(food.fat * 10) / 10, sugar_g: food.sugar ?? null, fibre_g: food.fibre ?? null, saturated_fat_g: food.saturatedFat ?? null, salt_g: food.salt ?? null, barcode: food.barcode || null }, ...prev]);
       toast.success("Added to favourites");
     }
   };

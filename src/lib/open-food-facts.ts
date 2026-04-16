@@ -11,6 +11,11 @@ export interface FoodItem {
   protein: number;
   carbs: number;
   fat: number;
+  // Extended nutrition — per 100g, null when not available from source
+  sugar?: number | null;
+  fibre?: number | null;
+  saturatedFat?: number | null;
+  salt?: number | null;
   imageUrl?: string;
 }
 
@@ -27,6 +32,8 @@ function parseServingGrams(s: string): number | null {
   const m = s.match(/(\d+(?:\.\d+)?)\s*g\b/i);
   return m ? parseFloat(m[1]) : null;
 }
+
+function r1(n: number) { return Math.round(n * 10) / 10; }
 
 function parseFatSecretDescription(desc: string): { calories: number; fat: number; carbs: number; protein: number; servingSize: string; servingWeightG: number | null } {
   // Format: "Per 100g - Calories: 110kcal | Fat: 1.24g | Carbs: 0.00g | Protein: 23.09g"
@@ -48,9 +55,9 @@ function parseFatSecretDescription(desc: string): { calories: number; fat: numbe
     servingSize,
     servingWeightG: is100g ? null : servingWeightG,
     calories: Math.round(parseFloat(calMatch?.[1] || "0") * factor),
-    fat: Math.round(parseFloat(fatMatch?.[1] || "0") * factor * 10) / 10,
-    carbs: Math.round(parseFloat(carbMatch?.[1] || "0") * factor * 10) / 10,
-    protein: Math.round(parseFloat(protMatch?.[1] || "0") * factor * 10) / 10,
+    fat: r1(parseFloat(fatMatch?.[1] || "0") * factor),
+    carbs: r1(parseFloat(carbMatch?.[1] || "0") * factor),
+    protein: r1(parseFloat(protMatch?.[1] || "0") * factor),
   };
 }
 
@@ -73,6 +80,8 @@ function parseFatSecretFood(f: FatSecretFood): FoodItem {
     protein: parsed.protein,
     carbs: parsed.carbs,
     fat: parsed.fat,
+    // Extended fields not available in search description
+    sugar: null, fibre: null, saturatedFat: null, salt: null,
   };
 }
 
@@ -88,8 +97,16 @@ interface OFFProduct {
     proteins_100g?: number;
     carbohydrates_100g?: number;
     fat_100g?: number;
+    sugars_100g?: number;
+    fiber_100g?: number;
+    "saturated-fat_100g"?: number;
+    salt_100g?: number;
   };
   image_front_small_url?: string;
+}
+
+function nullIfZero(v: number | undefined): number | null {
+  return (v != null && v > 0) ? v : null;
 }
 
 function parseOFFProduct(p: OFFProduct): FoodItem | null {
@@ -103,9 +120,13 @@ function parseOFFProduct(p: OFFProduct): FoodItem | null {
     servingSize: p.serving_size || "100g",
     servingWeightG: (servingWeightG && servingWeightG !== 100) ? servingWeightG : null,
     calories: Math.round(n?.["energy-kcal_100g"] ?? 0),
-    protein: Math.round((n?.proteins_100g ?? 0) * 10) / 10,
-    carbs: Math.round((n?.carbohydrates_100g ?? 0) * 10) / 10,
-    fat: Math.round((n?.fat_100g ?? 0) * 10) / 10,
+    protein: r1(n?.proteins_100g ?? 0),
+    carbs: r1(n?.carbohydrates_100g ?? 0),
+    fat: r1(n?.fat_100g ?? 0),
+    sugar: nullIfZero(n?.sugars_100g != null ? r1(n.sugars_100g) : undefined),
+    fibre: nullIfZero(n?.fiber_100g != null ? r1(n.fiber_100g) : undefined),
+    saturatedFat: nullIfZero(n?.["saturated-fat_100g"] != null ? r1(n["saturated-fat_100g"]!) : undefined),
+    salt: nullIfZero(n?.salt_100g != null ? r1(n.salt_100g) : undefined),
     imageUrl: p.image_front_small_url,
   };
 }
@@ -160,11 +181,9 @@ export async function lookupBarcode(barcode: string): Promise<FoodItem | null> {
       const data = await res.json();
       const food = data?.food;
       if (food) {
-        // food.get.v4 returns detailed servings
         const servings = food.servings?.serving;
         const s = Array.isArray(servings) ? servings[0] : servings;
         if (s) {
-          // Determine serving weight in grams for normalisation
           const servingWeightG =
             s.metric_serving_unit === "g"
               ? parseFloat(s.metric_serving_amount || "0") || null
@@ -173,6 +192,10 @@ export async function lookupBarcode(barcode: string): Promise<FoodItem | null> {
           // FatSecret barcode returns macros per serving — normalise to per-100g
           const factor = (servingWeightG && servingWeightG !== 100) ? (100 / servingWeightG) : 1;
 
+          // sodium in mg → salt in g (×2.5/1000)
+          const sodiumMg = parseFloat(s.sodium || "0");
+          const saltPer100g = sodiumMg ? r1((sodiumMg * 2.5 / 1000) * factor) : null;
+
           return {
             barcode,
             name: food.food_name,
@@ -180,9 +203,13 @@ export async function lookupBarcode(barcode: string): Promise<FoodItem | null> {
             servingSize: s.serving_description || s.metric_serving_unit || "1 serving",
             servingWeightG: (servingWeightG && servingWeightG !== 100) ? servingWeightG : null,
             calories: Math.round(parseFloat(s.calories || "0") * factor),
-            protein: Math.round(parseFloat(s.protein || "0") * factor * 10) / 10,
-            carbs: Math.round(parseFloat(s.carbohydrate || "0") * factor * 10) / 10,
-            fat: Math.round(parseFloat(s.fat || "0") * factor * 10) / 10,
+            protein: r1(parseFloat(s.protein || "0") * factor),
+            carbs: r1(parseFloat(s.carbohydrate || "0") * factor),
+            fat: r1(parseFloat(s.fat || "0") * factor),
+            sugar: s.sugar ? r1(parseFloat(s.sugar) * factor) : null,
+            fibre: s.fiber ? r1(parseFloat(s.fiber) * factor) : null,
+            saturatedFat: s.saturated_fat ? r1(parseFloat(s.saturated_fat) * factor) : null,
+            salt: saltPer100g,
           };
         }
       }

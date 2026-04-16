@@ -28,6 +28,10 @@ interface FoodLog {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  sugar_g?: number | null;
+  fibre_g?: number | null;
+  saturated_fat_g?: number | null;
+  salt_g?: number | null;
   barcode?: string | null;
 }
 
@@ -73,7 +77,7 @@ export default function FoodTracker() {
     const [logsRes, goalsRes, waterRes] = await Promise.all([
       supabase
         .from("food_logs")
-        .select("id, meal_type, food_name, brand, serving_qty, serving_size, calories, protein_g, carbs_g, fat_g, barcode")
+        .select("id, meal_type, food_name, brand, serving_qty, serving_size, calories, protein_g, carbs_g, fat_g, sugar_g, fibre_g, saturated_fat_g, salt_g, barcode")
         .eq("user_id", user.id)
         .eq("date", date)
         .order("created_at"),
@@ -282,6 +286,13 @@ export default function FoodTracker() {
               return next;
             });
 
+            // Aggregate extended nutrition for the meal
+            const mealSugar   = mealLogs.reduce((s, l) => s + (l.sugar_g ?? 0), 0);
+            const mealSatFat  = mealLogs.reduce((s, l) => s + (l.saturated_fat_g ?? 0), 0);
+            const mealFibre   = mealLogs.reduce((s, l) => s + (l.fibre_g ?? 0), 0);
+            const mealSalt    = mealLogs.reduce((s, l) => s + (l.salt_g ?? 0), 0);
+            const hasExtended = mealLogs.some(l => l.sugar_g != null || l.fibre_g != null || l.saturated_fat_g != null || l.salt_g != null);
+
             return (
               <div key={meal.type} className="rounded-xl bg-card border border-border overflow-hidden">
                 {/* ── Header row ─────────────────────────────────────────────── */}
@@ -298,11 +309,7 @@ export default function FoodTracker() {
                       <p className="text-[10px] text-muted-foreground mt-0.5 pl-7">
                         <span className="font-medium text-foreground">{Math.round(mealCals)} kcal</span>
                         <span className="mx-1 opacity-40">·</span>
-                        <span className="text-blue-400">{Math.round(mealPro)}g P</span>
-                        <span className="mx-1 opacity-40">·</span>
-                        <span className="text-amber-400">{Math.round(mealCarbs)}g C</span>
-                        <span className="mx-1 opacity-40">·</span>
-                        <span className="text-rose-400">{Math.round(mealFat)}g F</span>
+                        {mealLogs.length} item{mealLogs.length !== 1 ? "s" : ""}
                       </p>
                     )}
                   </div>
@@ -331,38 +338,86 @@ export default function FoodTracker() {
                   </div>
                 </button>
 
+                {/* ── Collapsed food list (always visible when items exist) ──── */}
+                {!isExpanded && mealLogs.length > 0 && (
+                  <div className="border-t border-border">
+                    {mealLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="flex items-center justify-between px-3 py-2 border-b border-border/50 last:border-0"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium truncate">{log.food_name}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {log.serving_qty} × {log.serving_size || "100g"}
+                          </p>
+                        </div>
+                        <span className="text-xs font-semibold text-primary shrink-0 ml-2">
+                          {Math.round(log.calories)} kcal
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* ── Expanded content ───────────────────────────────────────── */}
                 {isExpanded && (
                   <>
-                    {/* Macro breakdown panel */}
+                    {/* Full nutrition breakdown */}
                     {mealLogs.length > 0 && (
-                      <div className="border-t border-border px-3 py-3 grid grid-cols-4 gap-2 bg-secondary/20">
-                        {[
-                          { label: "Calories", value: Math.round(mealCals), unit: "kcal", goal: goals?.calories ?? 0, color: "bg-primary" },
-                          { label: "Protein",  value: Math.round(mealPro),   unit: "g",    goal: goals?.protein_g ?? 0, color: "bg-blue-400" },
-                          { label: "Carbs",    value: Math.round(mealCarbs), unit: "g",    goal: goals?.carbs_g ?? 0,   color: "bg-amber-400" },
-                          { label: "Fat",      value: Math.round(mealFat),   unit: "g",    goal: goals?.fat_g ?? 0,     color: "bg-rose-400" },
-                        ].map((m) => (
-                          <div key={m.label} className="text-center">
-                            <p className="text-[10px] text-muted-foreground mb-1">{m.label}</p>
-                            <p className="text-sm font-bold leading-none">{m.value}<span className="text-[10px] font-normal text-muted-foreground ml-0.5">{m.unit}</span></p>
-                            {m.goal > 0 && (
-                              <div className="mt-1.5 h-1 bg-secondary rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${m.color} transition-all duration-500`}
-                                  style={{ width: `${Math.min(100, (m.value / m.goal) * 100)}%` }}
-                                />
-                              </div>
-                            )}
-                            {m.goal > 0 && (
-                              <p className="text-[9px] text-muted-foreground mt-0.5">{Math.round((m.value / m.goal) * 100)}% of goal</p>
-                            )}
-                          </div>
-                        ))}
+                      <div className="border-t border-border bg-secondary/20 px-3 py-3 space-y-3">
+                        {/* Primary macros with goal progress */}
+                        <div className="grid grid-cols-4 gap-2">
+                          {[
+                            { label: "Calories", value: Math.round(mealCals),  unit: "kcal", goal: goals?.calories ?? 0, color: "bg-primary" },
+                            { label: "Protein",  value: Math.round(mealPro),   unit: "g",    goal: goals?.protein_g ?? 0, color: "bg-blue-400" },
+                            { label: "Carbs",    value: Math.round(mealCarbs), unit: "g",    goal: goals?.carbs_g ?? 0,   color: "bg-amber-400" },
+                            { label: "Fat",      value: Math.round(mealFat),   unit: "g",    goal: goals?.fat_g ?? 0,     color: "bg-rose-400" },
+                          ].map((m) => (
+                            <div key={m.label} className="text-center">
+                              <p className="text-[10px] text-muted-foreground mb-1">{m.label}</p>
+                              <p className="text-sm font-bold leading-none">
+                                {m.value}<span className="text-[10px] font-normal text-muted-foreground ml-0.5">{m.unit}</span>
+                              </p>
+                              {m.goal > 0 && (
+                                <>
+                                  <div className="mt-1.5 h-1 bg-secondary rounded-full overflow-hidden">
+                                    <div className={`h-full rounded-full ${m.color} transition-all duration-500`}
+                                      style={{ width: `${Math.min(100, (m.value / m.goal) * 100)}%` }} />
+                                  </div>
+                                  <p className="text-[9px] text-muted-foreground mt-0.5">{Math.round((m.value / m.goal) * 100)}%</p>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Extended nutrition (sugar, sat fat, fibre, salt) */}
+                        {hasExtended && (
+                          <>
+                            <div className="border-t border-border/50" />
+                            <div className="grid grid-cols-4 gap-2">
+                              {[
+                                { label: "Sugar",    value: mealSugar,  color: "text-amber-300" },
+                                { label: "Sat Fat",  value: mealSatFat, color: "text-rose-300" },
+                                { label: "Fibre",    value: mealFibre,  color: "text-green-400" },
+                                { label: "Salt",     value: mealSalt,   color: "text-slate-300" },
+                              ].map((m) => (
+                                <div key={m.label} className="text-center">
+                                  <p className="text-[10px] text-muted-foreground mb-1">{m.label}</p>
+                                  <p className={`text-sm font-bold leading-none ${m.color}`}>
+                                    {m.value > 0 ? m.value.toFixed(1) : "—"}
+                                    {m.value > 0 && <span className="text-[10px] font-normal text-muted-foreground ml-0.5">g</span>}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
 
-                    {/* Food items */}
+                    {/* Food items with edit/delete */}
                     {mealLogs.length > 0 ? (
                       <div className="border-t border-border">
                         {mealLogs.map((log) => (
@@ -379,11 +434,6 @@ export default function FoodTracker() {
                               <p className="text-[10px] text-muted-foreground">
                                 {log.serving_qty} × {log.serving_size || "100g"}
                               </p>
-                              <div className="flex gap-2 mt-0.5">
-                                <span className="text-[10px] text-blue-400">{Math.round(log.protein_g)}g P</span>
-                                <span className="text-[10px] text-amber-400">{Math.round(log.carbs_g)}g C</span>
-                                <span className="text-[10px] text-rose-400">{Math.round(log.fat_g)}g F</span>
-                              </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="text-xs font-semibold text-primary">{Math.round(log.calories)} kcal</span>
@@ -428,6 +478,10 @@ export default function FoodTracker() {
             protein_g: editingLog.log.protein_g,
             carbs_g: editingLog.log.carbs_g,
             fat_g: editingLog.log.fat_g,
+            sugar_g: editingLog.log.sugar_g,
+            fibre_g: editingLog.log.fibre_g,
+            saturated_fat_g: editingLog.log.saturated_fat_g,
+            salt_g: editingLog.log.salt_g,
             barcode: editingLog.log.barcode || null,
           } : null}
         />
