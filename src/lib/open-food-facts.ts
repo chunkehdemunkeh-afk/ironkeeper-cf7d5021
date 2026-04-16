@@ -182,10 +182,12 @@ export async function fetchExtendedNutrition(foodId: string): Promise<Pick<FoodI
     if (!res.ok) return null;
     const data = await res.json();
     const food = data?.food;
-    if (!food) return null;
+    if (!food) { console.warn("[ExtNutrition] food.get returned no food object", data); return null; }
     const servings = food.servings?.serving;
     const s = Array.isArray(servings) ? servings[0] : servings;
-    if (!s) return null;
+    if (!s) { console.warn("[ExtNutrition] no serving found in food.get response", food); return null; }
+
+    console.log("[ExtNutrition] serving fields:", { sugar: s.sugar, fiber: s.fiber, saturated_fat: s.saturated_fat, sodium: s.sodium, serving_description: s.serving_description });
 
     const servingWeightG =
       s.metric_serving_unit === "g"
