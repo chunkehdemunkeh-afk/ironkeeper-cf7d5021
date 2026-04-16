@@ -169,7 +169,8 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
     }
   }, [handleDecoded]);
 
-  useEffect(() => { return () => { void stopScanner(); }; }, [stopScanner]);
+  // Auto-start camera when component mounts
+  useEffect(() => { void startScanner(); return () => { void stopScanner(); }; }, []);
 
   const applyHwZoom = async (level: number) => {
     const track = trackRef.current;
@@ -198,24 +199,16 @@ export default function BarcodeScanner({ onFoodFound }: Props) {
       className="flex-1 flex flex-col items-center p-4 gap-4"
       style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
     >
-      {/* ── Idle state ─────────────────────────────────────────────────────── */}
-      {!scanning && (
+      {/* ── Error / retry state ────────────────────────────────────────────── */}
+      {!scanning && error && (
         <div className="flex flex-col items-center gap-4 py-8">
           <div className="h-20 w-20 rounded-2xl bg-secondary flex items-center justify-center">
             <Camera className="h-10 w-10 text-muted-foreground" />
           </div>
-          <div className="text-center space-y-1">
-            <p className="text-sm font-medium">Scan a Barcode</p>
-            <p className="text-xs text-muted-foreground max-w-[240px]">
-              Point your camera at a food barcode to instantly look up nutrition info
-            </p>
-          </div>
+          <p className="text-xs text-destructive text-center max-w-[260px]">{error}</p>
           <Button onClick={startScanner} className="h-11 px-6">
-            <Camera className="h-4 w-4 mr-2" /> Open Camera
+            <Camera className="h-4 w-4 mr-2" /> Retry Camera
           </Button>
-          {error && (
-            <p className="text-xs text-destructive text-center max-w-[260px]">{error}</p>
-          )}
         </div>
       )}
 

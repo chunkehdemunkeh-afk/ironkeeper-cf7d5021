@@ -175,7 +175,8 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
     setEditCarbs(String(Math.round(food.carbs * 10) / 10));
     setEditFat(String(Math.round(food.fat * 10) / 10));
     setServings("1");
-    setServingGrams(100);
+    // Default to per-serving when the food has a known serving size, otherwise 100g
+    setServingGrams(food.servingWeightG ?? 100);
   };
 
   // Per-100g base values (edited by user)
@@ -494,6 +495,18 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
                         <div>
                           <Label className="text-xs text-muted-foreground">Serving size</Label>
                           <div className="flex gap-2 mt-1">
+                            {selected.servingWeightG && (
+                              <button
+                                onClick={() => { setServingGrams(selected.servingWeightG!); setServings("1"); }}
+                                className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                                  servingGrams === selected.servingWeightG
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-secondary text-muted-foreground border-border hover:border-primary/50"
+                                }`}
+                              >
+                                Serving
+                              </button>
+                            )}
                             {[100, 50, 25, 1].map((g) => (
                               <button
                                 key={g}

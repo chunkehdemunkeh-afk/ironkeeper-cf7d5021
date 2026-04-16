@@ -5,6 +5,8 @@ export interface FoodItem {
   name: string;
   brand?: string;
   servingSize?: string;
+  /** Grams per one serving (used to default the serving-size picker). Always null when serving = 100g. Macros are always stored per-100g. */
+  servingWeightG?: number | null;
   calories: number;
   protein: number;
   carbs: number;
@@ -20,7 +22,13 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 // ---------- FatSecret helpers ----------
 
-function parseFatSecretDescription(desc: string): { calories: number; fat: number; carbs: number; protein: number; servingSize: string } {
+/** Extract the numeric gram value from strings like "30g", "1 serving (30g)", "100 g". Returns null if undetectable. */
+function parseServingGrams(s: string): number | null {
+  const m = s.match(/(\d+(?:\.\d+)?)\s*g\b/i);
+  return m ? parseFloat(m[1]) : null;
+}
+
+function parseFatSecretDescription(desc: string): { calories: number; fat: number; carbs: number; protein: number; servingSize: string; servingWeightG: number | null } {
   // Format: "Per 100g - Calories: 110kcal | Fat: 1.24g | Carbs: 0.00g | Protein: 23.09g"
   // Or:     "Per 1 serving (61g) - Calories: 170kcal | Fat: 3.00g | Carbs: 24.70g | Protein: 10.40g"
   const servingMatch = desc.match(/^Per\s+(.+?)\s*-/);
@@ -29,12 +37,20 @@ function parseFatSecretDescription(desc: string): { calories: number; fat: numbe
   const carbMatch = desc.match(/Carbs:\s*([\d.]+)/);
   const protMatch = desc.match(/Prot(?:ein)?:\s*([\d.]+)/);
 
+  const servingSize = servingMatch?.[1] || "1 serving";
+  const servingWeightG = parseServingGrams(servingSize);
+  const is100g = servingWeightG === 100;
+
+  // Normalise to per-100g so the UI multiplier model is always consistent
+  const factor = (!is100g && servingWeightG) ? (100 / servingWeightG) : 1;
+
   return {
-    servingSize: servingMatch?.[1] || "1 serving",
-    calories: Math.round(parseFloat(calMatch?.[1] || "0")),
-    fat: Math.round(parseFloat(fatMatch?.[1] || "0") * 10) / 10,
-    carbs: Math.round(parseFloat(carbMatch?.[1] || "0") * 10) / 10,
-    protein: Math.round(parseFloat(protMatch?.[1] || "0") * 10) / 10,
+    servingSize,
+    servingWeightG: is100g ? null : servingWeightG,
+    calories: Math.round(parseFloat(calMatch?.[1] || "0") * factor),
+    fat: Math.round(parseFloat(fatMatch?.[1] || "0") * factor * 10) / 10,
+    carbs: Math.round(parseFloat(carbMatch?.[1] || "0") * factor * 10) / 10,
+    protein: Math.round(parseFloat(protMatch?.[1] || "0") * factor * 10) / 10,
   };
 }
 
@@ -52,6 +68,7 @@ function parseFatSecretFood(f: FatSecretFood): FoodItem {
     name: f.food_name,
     brand: f.brand_name,
     servingSize: parsed.servingSize,
+    servingWeightG: parsed.servingWeightG,
     calories: parsed.calories,
     protein: parsed.protein,
     carbs: parsed.carbs,
@@ -78,11 +95,13 @@ interface OFFProduct {
 function parseOFFProduct(p: OFFProduct): FoodItem | null {
   if (!p.product_name) return null;
   const n = p.nutriments;
+  const servingWeightG = parseServingGrams(p.serving_size || "");
   return {
     barcode: p.code,
     name: p.product_name,
     brand: p.brands,
     servingSize: p.serving_size || "100g",
+    servingWeightG: (servingWeightG && servingWeightG !== 100) ? servingWeightG : null,
     calories: Math.round(n?.["energy-kcal_100g"] ?? 0),
     protein: Math.round((n?.proteins_100g ?? 0) * 10) / 10,
     carbs: Math.round((n?.carbohydrates_100g ?? 0) * 10) / 10,
@@ -145,15 +164,25 @@ export async function lookupBarcode(barcode: string): Promise<FoodItem | null> {
         const servings = food.servings?.serving;
         const s = Array.isArray(servings) ? servings[0] : servings;
         if (s) {
+          // Determine serving weight in grams for normalisation
+          const servingWeightG =
+            s.metric_serving_unit === "g"
+              ? parseFloat(s.metric_serving_amount || "0") || null
+              : parseServingGrams(s.serving_description || "");
+
+          // FatSecret barcode returns macros per serving — normalise to per-100g
+          const factor = (servingWeightG && servingWeightG !== 100) ? (100 / servingWeightG) : 1;
+
           return {
             barcode,
             name: food.food_name,
             brand: food.brand_name,
             servingSize: s.serving_description || s.metric_serving_unit || "1 serving",
-            calories: Math.round(parseFloat(s.calories || "0")),
-            protein: Math.round(parseFloat(s.protein || "0") * 10) / 10,
-            carbs: Math.round(parseFloat(s.carbohydrate || "0") * 10) / 10,
-            fat: Math.round(parseFloat(s.fat || "0") * 10) / 10,
+            servingWeightG: (servingWeightG && servingWeightG !== 100) ? servingWeightG : null,
+            calories: Math.round(parseFloat(s.calories || "0") * factor),
+            protein: Math.round(parseFloat(s.protein || "0") * factor * 10) / 10,
+            carbs: Math.round(parseFloat(s.carbohydrate || "0") * factor * 10) / 10,
+            fat: Math.round(parseFloat(s.fat || "0") * factor * 10) / 10,
           };
         }
       }
