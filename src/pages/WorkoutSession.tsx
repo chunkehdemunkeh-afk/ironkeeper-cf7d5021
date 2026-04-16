@@ -28,6 +28,23 @@ import {
 
 type SetLog = { reps: number; weight: number; completed: boolean };
 
+const CABLE_ATTACHMENTS = ["Handles", "V-Bar", "MAG Grip", "Straight Bar", "Rope", "Cuff & Lat Bar"] as const;
+type CableAttachment = typeof CABLE_ATTACHMENTS[number];
+
+function attachmentKey(att: string) {
+  return att.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+}
+
+/** Returns true for any cable-stack or lat machine exercise that benefits from attachment tracking */
+function isCableAttachmentExercise(name: string): boolean {
+  const dn = name.toLowerCase();
+  return [
+    "cable", "pushdown", "push down", "face pull", "facepull", "pallof",
+    "crossover", "straight-arm", "lat pull", "pulldown", "pull down",
+    "seated row", "lat row", "cable row",
+  ].some((kw) => dn.includes(kw));
+}
+
 function SwipeableSetRow({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
   const x = useMotionValue(0);
   const deleteOpacity = useTransform(x, [-100, -60], [1, 0]);
@@ -197,8 +214,10 @@ export default function WorkoutSession() {
     let effective = base;
     if (twoHandedExercises.has(originalId)) effective += "-2h";
     if (heavyStackExercises.has(originalId)) effective += "-heavy";
+    const att = cableAttachments[originalId];
+    if (att) effective += `-${attachmentKey(att)}`;
     return effective;
-  }, [exerciseOverrides, twoHandedExercises, heavyStackExercises]);
+  }, [exerciseOverrides, twoHandedExercises, heavyStackExercises, cableAttachments]);
   const [restTimerKey, setRestTimerKey] = useState(0);
   const [restDuration, setRestDuration] = useState(workout?.id === "power" ? 45 : 60);
   const [videoExercise, setVideoExercise] = useState<{ name: string; id: string } | null>(null);
@@ -207,6 +226,7 @@ export default function WorkoutSession() {
   const [weightDownSuggestions, setWeightDownSuggestions] = useState<Record<string, number[]>>({});
   const [addedAccessories, setAddedAccessories] = useState<string[]>([]);
   const [bodyweightExercises, setBodyweightExercises] = useState<Set<string>>(new Set());
+  const [cableAttachments, setCableAttachments] = useState<Record<string, string>>({});
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const autoSaveKey = workout ? `workout-autosave-${workout.id}` : null;
 
@@ -222,6 +242,7 @@ export default function WorkoutSession() {
       bodyweightExercises: Array.from(bodyweightExercises),
       twoHandedExercises: Array.from(twoHandedExercises),
       heavyStackExercises: Array.from(heavyStackExercises),
+      cableAttachments,
       elapsed,
       expandedExercise,
       weightUpSuggestions,
@@ -297,6 +318,7 @@ export default function WorkoutSession() {
         setBodyweightExercises(new Set(parsed.bodyweightExercises || []));
         setTwoHandedExercises(new Set(parsed.twoHandedExercises || []));
         setHeavyStackExercises(new Set(parsed.heavyStackExercises || []));
+        setCableAttachments(parsed.cableAttachments || {});
         setElapsed(parsed.elapsed || 0);
         setExpandedExercise(parsed.expandedExercise || null);
         setWeightUpSuggestions(parsed.weightUpSuggestions || {});
@@ -1046,6 +1068,28 @@ export default function WorkoutSession() {
                                     </div>
                                   )}
                                 </div>
+                                {/* Attachment selector — all cable / lat machine exercises */}
+                                {isCableAttachmentExercise(displayName) && (
+                                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                                    <span className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wide shrink-0">Attachment</span>
+                                    {CABLE_ATTACHMENTS.map((att) => (
+                                      <button
+                                        key={att}
+                                        onClick={() => setCableAttachments(prev => ({
+                                          ...prev,
+                                          [ex.id]: prev[ex.id] === att ? "" : att,
+                                        }))}
+                                        className={`flex-none rounded-full px-2.5 py-1 text-[11px] font-medium transition-all select-none whitespace-nowrap ${
+                                          cableAttachments[ex.id] === att
+                                            ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                                            : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
+                                        }`}
+                                      >
+                                        {att}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
                               )}
                               <div className={`grid ${isTimeBased ? "grid-cols-[28px_1fr_36px]" : showWeight ? "grid-cols-[28px_1fr_1fr_36px]" : "grid-cols-[28px_1fr_36px]"} gap-x-1.5 items-center text-[10px] text-muted-foreground font-medium uppercase tracking-wider`}>
                                 <span className="text-center">Set</span>
@@ -1253,6 +1297,28 @@ export default function WorkoutSession() {
                                     return null;
                                   })()}
                                 </div>
+                                {/* Attachment selector for cable/lat exercises in superset */}
+                                {isCableAttachmentExercise(displayName) && (
+                                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar mt-1">
+                                    <span className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wide shrink-0">Attachment</span>
+                                    {CABLE_ATTACHMENTS.map((att) => (
+                                      <button
+                                        key={att}
+                                        onClick={() => setCableAttachments(prev => ({
+                                          ...prev,
+                                          [gExId]: prev[gExId] === att ? "" : att,
+                                        }))}
+                                        className={`flex-none rounded-full px-2 py-0.5 text-[10px] font-medium transition-all select-none whitespace-nowrap ${
+                                          cableAttachments[gExId] === att
+                                            ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                                            : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
+                                        }`}
+                                      >
+                                        {att}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
                                 {(gOverride?.notes || gEx.notes) && (
                                   <p className="text-[11px] text-primary/80 bg-primary/5 rounded-lg px-2 py-1">{gOverride?.notes || gEx.notes}</p>
                                 )}
