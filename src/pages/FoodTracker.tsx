@@ -216,15 +216,13 @@ export default function FoodTracker() {
               </div>
             </div>
             <div className="flex-1 space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Remaining</span>
-                <span className="font-semibold text-primary">
-                  {Math.max(0, goals.calories - Math.round(totals.calories))} kcal
-                </span>
-              </div>
-              <div className="text-[10px] text-muted-foreground">
-                {Math.round(totals.calories)} / {goals.calories} kcal
-              </div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Remaining</p>
+              <p className="text-xl font-bold text-primary leading-none">
+                {Math.max(0, goals.calories - Math.round(totals.calories))} kcal
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {Math.round(totals.calories)} eaten · {goals.calories} goal
+              </p>
             </div>
           </div>
 
