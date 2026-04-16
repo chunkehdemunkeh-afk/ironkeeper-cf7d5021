@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { format, addDays, subDays } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, Settings, Trash2, Flame, Beef, Wheat, Droplets, CheckCircle2, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Settings, Trash2, Flame, Beef, Wheat, Droplets, CheckCircle2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,7 @@ export default function FoodTracker() {
   const [editingLog, setEditingLog] = useState<EditingLog | null>(null);
   const [showComplete, setShowComplete] = useState(false);
   const [copyMeal, setCopyMeal] = useState<MealType | null>(null);
+  const [expandedMeals, setExpandedMeals] = useState<Set<string>>(new Set());
   const [waterMl, setWaterMl] = useState(0);
   const [waterGoalMl, setWaterGoalMl] = useState(2500);
 
@@ -267,26 +268,50 @@ export default function FoodTracker() {
           <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
         </div>
       ) : (
-        <div className="px-4 space-y-4">
+        <div className="px-4 space-y-3">
           {MEALS.map((meal) => {
             const mealLogs = logs.filter((l) => l.meal_type === meal.type);
-            const mealCals = mealLogs.reduce((s, l) => s + l.calories, 0);
+            const mealCals  = mealLogs.reduce((s, l) => s + l.calories, 0);
+            const mealPro   = mealLogs.reduce((s, l) => s + l.protein_g, 0);
+            const mealCarbs = mealLogs.reduce((s, l) => s + l.carbs_g, 0);
+            const mealFat   = mealLogs.reduce((s, l) => s + l.fat_g, 0);
+            const isExpanded = expandedMeals.has(meal.type);
+            const toggle = () => setExpandedMeals(prev => {
+              const next = new Set(prev);
+              next.has(meal.type) ? next.delete(meal.type) : next.add(meal.type);
+              return next;
+            });
+
             return (
               <div key={meal.type} className="rounded-xl bg-card border border-border overflow-hidden">
-                <div className="flex items-center justify-between p-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">{meal.icon}</span>
-                    <span className="text-sm font-semibold">{meal.label}</span>
+                {/* ── Header row ─────────────────────────────────────────────── */}
+                <button
+                  className="w-full flex items-center justify-between p-3 text-left active:bg-secondary/30 transition-colors"
+                  onClick={toggle}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{meal.icon}</span>
+                      <span className="text-sm font-semibold">{meal.label}</span>
+                    </div>
                     {mealCals > 0 && (
-                      <span className="text-xs text-muted-foreground">{Math.round(mealCals)} kcal</span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 pl-7">
+                        <span className="font-medium text-foreground">{Math.round(mealCals)} kcal</span>
+                        <span className="mx-1 opacity-40">·</span>
+                        <span className="text-blue-400">{Math.round(mealPro)}g P</span>
+                        <span className="mx-1 opacity-40">·</span>
+                        <span className="text-amber-400">{Math.round(mealCarbs)}g C</span>
+                        <span className="mx-1 opacity-40">·</span>
+                        <span className="text-rose-400">{Math.round(mealFat)}g F</span>
+                      </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground"
-                      onClick={() => setCopyMeal(meal.type)}
+                      onClick={(e) => { e.stopPropagation(); setCopyMeal(meal.type); }}
                       title="Copy from another meal"
                     >
                       <Copy className="h-3.5 w-3.5" />
@@ -295,44 +320,89 @@ export default function FoodTracker() {
                       variant="ghost"
                       size="sm"
                       className="h-8 text-xs text-primary"
-                      onClick={() => setSearchMeal(meal.type)}
+                      onClick={(e) => { e.stopPropagation(); setSearchMeal(meal.type); }}
                     >
                       <Plus className="h-3 w-3 mr-1" /> Add
                     </Button>
+                    {isExpanded
+                      ? <ChevronUp className="h-4 w-4 text-muted-foreground ml-1" />
+                      : <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
+                    }
                   </div>
-                </div>
+                </button>
 
-                {mealLogs.length > 0 && (
-                  <div className="border-t border-border">
-                    {mealLogs.map((log) => (
-                      <div
-                        key={log.id}
-                        className="flex items-center justify-between px-3 py-2 border-b border-border/50 last:border-0 cursor-pointer active:bg-secondary/50 transition-colors"
-                        onClick={() => {
-                          setEditingLog({ id: log.id, mealType: meal.type, log });
-                          setSearchMeal(meal.type);
-                        }}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium truncate">{log.food_name}</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {log.serving_qty} × {log.serving_size || "100g"}
-                          </p>
-                          <div className="flex gap-2 mt-0.5">
-                            <span className="text-[10px] text-blue-400">{Math.round(log.protein_g)}g P</span>
-                            <span className="text-[10px] text-amber-400">{Math.round(log.carbs_g)}g C</span>
-                            <span className="text-[10px] text-rose-400">{Math.round(log.fat_g)}g F</span>
+                {/* ── Expanded content ───────────────────────────────────────── */}
+                {isExpanded && (
+                  <>
+                    {/* Macro breakdown panel */}
+                    {mealLogs.length > 0 && (
+                      <div className="border-t border-border px-3 py-3 grid grid-cols-4 gap-2 bg-secondary/20">
+                        {[
+                          { label: "Calories", value: Math.round(mealCals), unit: "kcal", goal: goals?.calories ?? 0, color: "bg-primary" },
+                          { label: "Protein",  value: Math.round(mealPro),   unit: "g",    goal: goals?.protein_g ?? 0, color: "bg-blue-400" },
+                          { label: "Carbs",    value: Math.round(mealCarbs), unit: "g",    goal: goals?.carbs_g ?? 0,   color: "bg-amber-400" },
+                          { label: "Fat",      value: Math.round(mealFat),   unit: "g",    goal: goals?.fat_g ?? 0,     color: "bg-rose-400" },
+                        ].map((m) => (
+                          <div key={m.label} className="text-center">
+                            <p className="text-[10px] text-muted-foreground mb-1">{m.label}</p>
+                            <p className="text-sm font-bold leading-none">{m.value}<span className="text-[10px] font-normal text-muted-foreground ml-0.5">{m.unit}</span></p>
+                            {m.goal > 0 && (
+                              <div className="mt-1.5 h-1 bg-secondary rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${m.color} transition-all duration-500`}
+                                  style={{ width: `${Math.min(100, (m.value / m.goal) * 100)}%` }}
+                                />
+                              </div>
+                            )}
+                            {m.goal > 0 && (
+                              <p className="text-[9px] text-muted-foreground mt-0.5">{Math.round((m.value / m.goal) * 100)}% of goal</p>
+                            )}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs font-semibold text-primary">{Math.round(log.calories)}</span>
-                          <button onClick={(e) => { e.stopPropagation(); deleteLog(log.id); }} className="text-muted-foreground hover:text-destructive">
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )}
+
+                    {/* Food items */}
+                    {mealLogs.length > 0 ? (
+                      <div className="border-t border-border">
+                        {mealLogs.map((log) => (
+                          <div
+                            key={log.id}
+                            className="flex items-center justify-between px-3 py-2.5 border-b border-border/50 last:border-0 cursor-pointer active:bg-secondary/50 transition-colors"
+                            onClick={() => {
+                              setEditingLog({ id: log.id, mealType: meal.type, log });
+                              setSearchMeal(meal.type);
+                            }}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium truncate">{log.food_name}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {log.serving_qty} × {log.serving_size || "100g"}
+                              </p>
+                              <div className="flex gap-2 mt-0.5">
+                                <span className="text-[10px] text-blue-400">{Math.round(log.protein_g)}g P</span>
+                                <span className="text-[10px] text-amber-400">{Math.round(log.carbs_g)}g C</span>
+                                <span className="text-[10px] text-rose-400">{Math.round(log.fat_g)}g F</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs font-semibold text-primary">{Math.round(log.calories)} kcal</span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteLog(log.id); }}
+                                className="text-muted-foreground hover:text-destructive transition-colors"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="border-t border-border px-3 py-4 text-center text-xs text-muted-foreground">
+                        Nothing logged yet — tap <strong>Add</strong> to get started
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             );
