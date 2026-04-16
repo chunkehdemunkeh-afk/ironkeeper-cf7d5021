@@ -12,6 +12,21 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
+    version: "1.6.20",
+    date: "2026-04-16",
+    title: "Updates & Fixes",
+    changes: [
+      "Improve nutrition log UX: auto-open camera and default to per-serving",
+      "Update daily review metric tabs to strictly show Weight, Calories, Water, and Total Volume",
+      "Add error toast to saveDailyLog to diagnose save failures",
+      "Fix: Sticky footer for CompleteDaySummary sheet to resolve iOS cutoff",
+      "Food tracker improvements",
+      "Barcode scanner improvements",
+      "Progress tracking improvements",
+      "Profile page updates",
+    ],
+  },
+  {
     version: "1.6.19",
     date: "2026-04-15",
     title: "Updates & Fixes",
