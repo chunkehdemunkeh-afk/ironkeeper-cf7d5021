@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.29",
+    version: "1.6.30",
     date: "2026-04-16",
     title: "Updates & Fixes",
     changes: [
-      "Guarantee extended nutrition is saved by fetching synchronously at log time",
+      "Add diagnostic logging to fetchExtendedNutrition",
     ],
   },
   {
