@@ -151,7 +151,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("FatSecret edge function error:", error);
     return new Response(
-      JSON.stringify({ foods: null, error: error.message }),
+      JSON.stringify({ foods: null, error: (error as Error).message }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

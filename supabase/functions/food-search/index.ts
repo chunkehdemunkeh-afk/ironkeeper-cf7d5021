@@ -45,7 +45,7 @@ serve(async (req) => {
     });
   } catch (error) {
     return new Response(
-      JSON.stringify({ products: [], error: error.message, fallback: true }),
+      JSON.stringify({ products: [], error: (error as Error).message, fallback: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

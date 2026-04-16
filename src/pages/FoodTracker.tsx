@@ -92,7 +92,7 @@ export default function FoodTracker() {
         .eq("user_id", user.id)
         .eq("date", date),
     ]);
-    setLogs((logsRes.data as FoodLog[]) || []);
+    setLogs((logsRes.data as unknown as FoodLog[]) || []);
     if (goalsRes.data) {
       setGoals(goalsRes.data as Goals);
       if ((goalsRes.data as any).water_goal_ml) setWaterGoalMl((goalsRes.data as any).water_goal_ml);
