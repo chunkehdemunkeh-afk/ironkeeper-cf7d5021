@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.26",
+    version: "1.6.27",
     date: "2026-04-16",
     title: "Updates & Fixes",
     changes: [
-      "Remove autoFocus from food search input to fix scroll jank on open",
+      "Redesign expanded meal card to use a proper Nutrition Facts label",
     ],
   },
   {
