@@ -12,10 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.21",
+    version: "1.6.22",
     date: "2026-04-16",
     title: "Updates & Fixes",
     changes: [
+      "Open favourites for editing before logging instead of instant quick-add",
       "Clarify remaining calories display in nutrition summary card",
       "Improve nutrition log UX: auto-open camera and default to per-serving",
       "Update daily review metric tabs to strictly show Weight, Calories, Water, and Total Volume",
@@ -23,7 +24,6 @@ export const changelog: ChangelogEntry[] = [
       "Fix: Sticky footer for CompleteDaySummary sheet to resolve iOS cutoff",
       "Food tracker improvements",
       "Barcode scanner improvements",
-      "Progress tracking improvements",
     ],
   },
   {
