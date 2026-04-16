@@ -208,6 +208,7 @@ export default function WorkoutSession() {
   const [exerciseOverrides, setExerciseOverrides] = useState<Record<string, { name: string; notes?: string; targetMuscle: string; trackWeight?: boolean; repLabel?: string; weightLabel?: string; substituteId?: string }>>({});
   // Substitutions used in the PREVIOUS session for this workout (for visual cue)
   const [lastSubstitutions, setLastSubstitutions] = useState<Record<string, { subName: string; subId: string }>>({}); 
+  const [cableAttachments, setCableAttachments] = useState<Record<string, string>>({});
   // Get the effective exercise ID for data lookups (substitute ID if swapped, otherwise original)
   const getEffectiveExId = useCallback((originalId: string) => {
     const base = exerciseOverrides[originalId]?.substituteId || originalId;
@@ -227,7 +228,6 @@ export default function WorkoutSession() {
   const [addedAccessories, setAddedAccessories] = useState<string[]>([]);
   const [bodyweightExercises, setBodyweightExercises] = useState<Set<string>>(new Set());
   const [showResumePrompt, setShowResumePrompt] = useState(false);
-  const [cableAttachments, setCableAttachments] = useState<Record<string, string>>({});
   const autoSaveKey = workout ? `workout-autosave-${workout.id}` : null;
 
   // Auto-save session state to localStorage
