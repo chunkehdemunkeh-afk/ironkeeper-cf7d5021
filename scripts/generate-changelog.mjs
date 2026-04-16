@@ -2,42 +2,36 @@
  * generate-changelog.mjs
  *
  * Runs as a GitHub Action on every push to main.
- * Reads recent git commits, filters noise, and upserts a daily changelog
- * entry into src/lib/changelog.ts.
+ * Reads recent git commits and upserts a daily changelog entry into
+ * src/lib/changelog.ts.
  *
  * Behaviour:
- *   • If there is already an entry for TODAY → replace it with a fresh one
- *     that includes ALL commits since the previous day's entry.
- *   • If there is no entry for today → create a new one and bump the version.
- *   • Generic / noisy commits are filtered out automatically.
- *   • Falls back to file-change descriptions when commits are too vague.
+ *   • Baseline = the most recent "Auto-update changelog" commit.
+ *     Only commits AFTER that point are considered new.
+ *   • If no auto-update has ever run, falls back to the last human
+ *     commit that touched changelog.ts.
+ *   • Generic / noisy commits are filtered out.
+ *   • File-map fallbacks are intentionally removed — they produced
+ *     vague entries ("Food tracker improvements") that persisted
+ *     across versions even after the real fix was already listed.
  */
 
-import { execSync }                          from "child_process";
-import { readFileSync, writeFileSync }        from "fs";
-import { dirname, join }                     from "path";
-import { fileURLToPath }                     from "url";
+import { execSync }           from "child_process";
+import { readFileSync, writeFileSync } from "fs";
+import { dirname, join }      from "path";
+import { fileURLToPath }      from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CHANGELOG = join(__dirname, "../src/lib/changelog.ts");
 const today     = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function run(cmd) {
   try { return execSync(cmd, { encoding: "utf8" }).trim(); }
   catch { return ""; }
 }
 
-/** Bump minor version: "1.6.0" → "1.7.0" */
-function bumpMinor(version) {
-  const parts = version.split(".").map(Number);
-  parts[1] += 1;
-  parts[2]  = 0;
-  return parts.join(".");
-}
-
-/** Bump patch version: "1.6.0" → "1.6.1" */
 function bumpPatch(version) {
   const parts = version.split(".").map(Number);
   parts[2] += 1;
@@ -45,125 +39,82 @@ function bumpPatch(version) {
 }
 
 // Commit messages we always ignore (technical / meta / too vague)
-const NOISE_RE = /^(work in progress|wip|changes?$|misc|temp|auto-update changelog|bumped? version|applied |switch(ed)? to|hard.?code|reverted?|updated?\s*$|added?\s*$|fix\s*$|test\s*$|restored?|fix pwa|pwa |service worker|sw |auto-update|skip waiting|controllerchange|networkfirst|cache|hash poll|ik-up|fix stale|deadlock|dual.?strat|registration|deployed?|rollback)/i;
-
-// Also drop messages that are clearly infrastructure / dev-only
+const NOISE_RE = /^(work in progress|wip|changes?$|misc|temp|auto-update changelog|bump.?version|applied |switch(ed)? to|hard.?code|reverted?|updated?\s*$|added?\s*$|fix\s*$|test\s*$|restored?|fix pwa|pwa |service worker|sw |auto-update|skip waiting|controllerchange|networkfirst|cache|hash poll|ik-up|fix stale|deadlock|dual.?strat|registration|deployed?|rollback|co-authored)/i;
 const INFRA_RE = /\b(sw\.js|vite\.config|github action|workbox|service.?worker|localstorage|flag|cache-buster|supabase|schema|migration|typescript|tsx|eslint|linting|npm|bun\.lock|package\.json)\b/i;
-
-// Map of changed-file patterns → human-readable descriptions
-const FILE_MAP = [
-  [/FoodTracker|food\//i,          "Food tracker improvements"],
-  [/BarcodeScanner/i,              "Barcode scanner improvements"],
-  [/NutritionSettings|TDEE/i,      "Nutrition settings updates"],
-  [/WaterIntake/i,                 "Water tracking improvements"],
-  [/WorkoutSession/i,              "Workout session improvements"],
-  [/workout-data/i,                "Workout library updates"],
-  [/ExerciseLibrary/i,             "Exercise library updates"],
-  [/History/i,                     "Workout history improvements"],
-  [/Progress/i,                    "Progress tracking improvements"],
-  [/Profile/i,                     "Profile page updates"],
-  [/Onboarding/i,                  "Onboarding flow improvements"],
-  [/BodyMeasurements/i,            "Body measurements updates"],
-  [/RecoveryTips|DailyStretch/i,   "Recovery & stretching updates"],
-  [/StatsBar|WeekStrip/i,          "Home screen improvements"],
-  [/CoachDashboard/i,              "Coach dashboard updates"],
-  [/sw\.js|main\.tsx|vite\.config/,"App reliability & performance"],
-  [/training-splits/i,             "Training programme updates"],
-  [/user-preferences/i,            "User preferences improvements"],
-];
 
 // ── Read changelog ─────────────────────────────────────────────────────────────
 
 let content = readFileSync(CHANGELOG, "utf8");
 
-// Extract the latest version in the file
 const latestVersionMatch = content.match(/version:\s*"(\d+\.\d+\.\d+)"/);
 const latestVersion = latestVersionMatch ? latestVersionMatch[1] : "1.6.0";
 
-// ── Figure out the "since" commit ─────────────────────────────────────────────
-// Find the last commit that touched changelog.ts but was NOT our bot.
-// That gives us the baseline — we include everything committed after it.
+// ── Find sinceHash ─────────────────────────────────────────────────────────────
+// Use the most recent "Auto-update changelog" commit as the baseline so we only
+// ever collect commits that arrived AFTER the last auto-run.
+// Falls back to the last human commit that touched changelog.ts if no auto-run exists.
 
 const changelogHistory = run(
   `git log --oneline --follow -- src/lib/changelog.ts`
 ).split("\n").filter(Boolean);
 
 let sinceHash = "";
+
+// First pass: find the most recent auto-update commit
 for (const line of changelogHistory) {
   const [hash, ...msgParts] = line.split(" ");
   const msg = msgParts.join(" ");
-  if (!msg.startsWith("Auto-update changelog")) {
-    // The NEXT entry in the log would be what came before this commit
-    const idx = changelogHistory.indexOf(line);
-    sinceHash = hash; // start from right after this commit
+  if (msg.startsWith("Auto-update changelog")) {
+    sinceHash = hash;
     break;
   }
 }
 
-// ── Collect commits ────────────────────────────────────────────────────────────
+// Second pass fallback: last human commit touching changelog.ts
+if (!sinceHash) {
+  for (const line of changelogHistory) {
+    const [hash, ...msgParts] = line.split(" ");
+    const msg = msgParts.join(" ");
+    if (!msg.startsWith("Auto-update changelog")) {
+      sinceHash = hash;
+      break;
+    }
+  }
+}
+
+// ── Collect commits since baseline ────────────────────────────────────────────
 
 const gitLogCmd = sinceHash
   ? `git log --oneline --no-merges ${sinceHash}..HEAD`
-  : `git log --oneline --no-merges -30`;
+  : `git log --oneline --no-merges -20`;
 
 const rawCommits = run(gitLogCmd)
   .split("\n")
   .filter(Boolean)
   .map(line => line.replace(/^[a-f0-9]+ /, "").trim());
 
-// Filter: keep meaningful messages, discard noise
-const meaningful = rawCommits
+const changes = rawCommits
   .filter(msg => !NOISE_RE.test(msg))
   .filter(msg => !INFRA_RE.test(msg))
-  .filter(msg => msg.length >= 15 && msg.length <= 90) // not too short or too long
-  // Capitalise first letter
+  .filter(msg => msg.length >= 15 && msg.length <= 120)
   .map(msg => msg.charAt(0).toUpperCase() + msg.slice(1))
   // Deduplicate (case-insensitive)
-  .filter((msg, i, arr) => arr.findIndex(m => m.toLowerCase() === msg.toLowerCase()) === i);
-
-// ── File-based fallback descriptions ──────────────────────────────────────────
-
-const changedFiles = sinceHash
-  ? run(`git diff --name-only ${sinceHash} HEAD`).split("\n")
-  : [];
-
-const fileDescriptions = [];
-for (const [pattern, description] of FILE_MAP) {
-  if (changedFiles.some(f => pattern.test(f)) && !fileDescriptions.includes(description)) {
-    fileDescriptions.push(description);
-  }
-}
-
-// Combine: meaningful commits first, then file-based (only if not already covered)
-const changes = [...meaningful];
-for (const desc of fileDescriptions) {
-  if (changes.length >= 8) break;
-  // Only add if nothing similar already exists
-  const covered = changes.some(c => c.toLowerCase().includes(desc.split(" ")[0].toLowerCase()));
-  if (!covered) changes.push(desc);
-}
+  .filter((msg, i, arr) => arr.findIndex(m => m.toLowerCase() === msg.toLowerCase()) === i)
+  .slice(0, 8);
 
 if (changes.length === 0) {
-  console.log("No meaningful changes found — skipping changelog update.");
+  console.log("No meaningful changes since last auto-update — skipping.");
   process.exit(0);
 }
 
-const bulletList = changes.slice(0, 8)
+// ── Build entry ────────────────────────────────────────────────────────────────
+
+const newVersion = bumpPatch(latestVersion);
+
+const bulletList = changes
   .map(c => `      "${c.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`)
   .join(",\n");
 
-// ── Determine version for the new entry ───────────────────────────────────────
-
-const todayInFile = content.includes(`date: "${today}"`);
-
-// Always bump the version so the "What's New" sheet triggers on cold boots
-// even if we deploy multiple times in the same day.
-const newVersion = bumpPatch(latestVersion);
-
-// ── Build the new changelog entry ─────────────────────────────────────────────
-
-// Entry body without leading indent — used in the REPLACE path
-// because content.slice(0, start) already ends with the 2-space indent
 const entryBody = `{
     version: "${newVersion}",
     date: "${today}",
@@ -173,15 +124,14 @@ ${bulletList},
     ],
   },`;
 
-// Entry with leading indent — used in the INSERT path (after "[\n")
 const entryWithIndent = `  ${entryBody}`;
 
-// ── Write back to changelog.ts ─────────────────────────────────────────────────
+// ── Write back ─────────────────────────────────────────────────────────────────
+
+const todayInFile = content.includes(`date: "${today}"`);
 
 if (todayInFile) {
-  // Replace the existing today block. Find the object that contains today's date.
-  // We locate it by finding `date: "YYYY-MM-DD"` and then expanding outward
-  // to capture the full `{ ... },` object.
+  // Replace the existing today block
   const dateStr = `date: "${today}"`;
   const dateIdx = content.indexOf(dateStr);
   if (dateIdx === -1) {
@@ -189,25 +139,20 @@ if (todayInFile) {
     process.exit(0);
   }
 
-  // Walk backward to find the opening `{`
   let start = dateIdx;
   while (start > 0 && content[start] !== "{") start--;
 
-  // Walk forward from `{` to find the matching `}`
-  let depth = 0;
-  let end = start;
+  let depth = 0, end = start;
   while (end < content.length) {
     if (content[end] === "{") depth++;
     if (content[end] === "}") { depth--; if (depth === 0) { end++; break; } }
     end++;
   }
-  // Consume optional trailing comma
   if (content[end] === ",") end++;
 
   content = content.slice(0, start) + entryBody + content.slice(end);
-  console.log(`♻️  Replaced today's (${today}) changelog entry — v${newVersion}, ${changes.length} changes`);
+  console.log(`♻️  Replaced today's (${today}) entry — v${newVersion}, ${changes.length} changes`);
 } else {
-  // Insert after the opening `[` of the changelog array
   content = content.replace(
     /export const changelog: ChangelogEntry\[\]\s*=\s*\[/,
     `export const changelog: ChangelogEntry[] = [\n${entryWithIndent}`
