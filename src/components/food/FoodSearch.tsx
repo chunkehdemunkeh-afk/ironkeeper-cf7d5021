@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Plus, Loader2, X, Clock, RotateCcw, PenLine, ScanBarcode, Star } from "lucide-react";
-import { searchFoods, FoodItem, ServiceUnavailableError } from "@/lib/open-food-facts";
+import { searchFoods, fetchExtendedNutrition, FoodItem, ServiceUnavailableError } from "@/lib/open-food-facts";
 import ManualFoodEntry from "./ManualFoodEntry";
 import BarcodeScanner from "./BarcodeScanner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -200,6 +200,17 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
     setServings("1");
     // Default to per-serving when the food has a known serving size, otherwise 100g
     setServingGrams(food.servingWeightG ?? 100);
+
+    // If extended fields are missing but we have a FatSecret food_id, fetch them in the background
+    if (food.foodId && food.sugar == null && food.fibre == null && food.saturatedFat == null && food.salt == null) {
+      fetchExtendedNutrition(food.foodId).then((ext) => {
+        if (!ext) return;
+        if (ext.sugar != null) setBaseSugar(ext.sugar);
+        if (ext.fibre != null) setBaseFibre(ext.fibre);
+        if (ext.saturatedFat != null) setBaseSatFat(ext.saturatedFat);
+        if (ext.salt != null) setBaseSalt(ext.salt);
+      });
+    }
   };
 
   // Per-100g base values (edited by user)

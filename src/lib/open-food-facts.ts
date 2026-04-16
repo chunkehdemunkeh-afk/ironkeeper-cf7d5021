@@ -2,6 +2,8 @@
 
 export interface FoodItem {
   barcode?: string;
+  /** FatSecret food_id — used to fetch full nutrition details after a search result is selected */
+  foodId?: string;
   name: string;
   brand?: string;
   servingSize?: string;
@@ -72,6 +74,7 @@ interface FatSecretFood {
 function parseFatSecretFood(f: FatSecretFood): FoodItem {
   const parsed = parseFatSecretDescription(f.food_description);
   return {
+    foodId: String(f.food_id),
     name: f.food_name,
     brand: f.brand_name,
     servingSize: parsed.servingSize,
@@ -80,7 +83,7 @@ function parseFatSecretFood(f: FatSecretFood): FoodItem {
     protein: parsed.protein,
     carbs: parsed.carbs,
     fat: parsed.fat,
-    // Extended fields not available in search description
+    // Extended fields not available in search description — fetched later via food_id
     sugar: null, fibre: null, saturatedFat: null, salt: null,
   };
 }
@@ -166,6 +169,39 @@ export async function searchFoods(query: string, page = 1): Promise<FoodItem[]> 
   } catch (e) {
     if (e instanceof ServiceUnavailableError) throw e;
     return [];
+  }
+}
+
+/** Fetch extended nutrition details (sugar, fibre, sat fat, salt) for a FatSecret food by its ID.
+ *  Returns only the extended fields — merge into an existing FoodItem. */
+export async function fetchExtendedNutrition(foodId: string): Promise<Pick<FoodItem, "sugar" | "fibre" | "saturatedFat" | "salt"> | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/fatsecret-search?food_id=${encodeURIComponent(foodId)}&region=GB&language=en`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const food = data?.food;
+    if (!food) return null;
+    const servings = food.servings?.serving;
+    const s = Array.isArray(servings) ? servings[0] : servings;
+    if (!s) return null;
+
+    const servingWeightG =
+      s.metric_serving_unit === "g"
+        ? parseFloat(s.metric_serving_amount || "0") || null
+        : parseServingGrams(s.serving_description || "");
+    const factor = (servingWeightG && servingWeightG !== 100) ? (100 / servingWeightG) : 1;
+    const sodiumMg = parseFloat(s.sodium || "0");
+
+    return {
+      sugar: s.sugar ? r1(parseFloat(s.sugar) * factor) : null,
+      fibre: s.fiber ? r1(parseFloat(s.fiber) * factor) : null,
+      saturatedFat: s.saturated_fat ? r1(parseFloat(s.saturated_fat) * factor) : null,
+      salt: sodiumMg ? r1((sodiumMg * 2.5 / 1000) * factor) : null,
+    };
+  } catch {
+    return null;
   }
 }
 

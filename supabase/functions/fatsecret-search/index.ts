@@ -73,6 +73,7 @@ serve(async (req) => {
   const query = url.searchParams.get("q") || "";
   const page = parseInt(url.searchParams.get("page") || "0");
   const barcode = url.searchParams.get("barcode") || "";
+  const foodId = url.searchParams.get("food_id") || "";
   const region = url.searchParams.get("region") || "GB";
   const language = url.searchParams.get("language") || "en";
 
@@ -80,7 +81,16 @@ serve(async (req) => {
     const baseUrl = "https://platform.fatsecret.com/rest/server.api";
     let params: Record<string, string>;
 
-    if (barcode) {
+    if (foodId) {
+      // Direct food detail lookup by ID — returns full nutrition profile
+      params = {
+        method: "food.get",
+        food_id: foodId,
+        format: "json",
+        region,
+        language,
+      };
+    } else if (barcode) {
       params = {
         method: "food.find_id_for_barcode",
         barcode,
