@@ -392,7 +392,6 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Search foods..."
                       className="pl-9 h-10"
-                      autoFocus
                     />
                   </div>
                   <Button type="submit" size="sm" disabled={searching} className="h-10 px-4">
