@@ -172,11 +172,15 @@ export type Database = {
           carbs_g: number
           created_at: string
           fat_g: number
+          fibre_g: number | null
           food_name: string
           id: string
           protein_g: number
+          salt_g: number | null
+          saturated_fat_g: number | null
           serving_qty: number
           serving_size: string | null
+          sugar_g: number | null
           user_id: string
         }
         Insert: {
@@ -186,11 +190,15 @@ export type Database = {
           carbs_g?: number
           created_at?: string
           fat_g?: number
+          fibre_g?: number | null
           food_name: string
           id?: string
           protein_g?: number
+          salt_g?: number | null
+          saturated_fat_g?: number | null
           serving_qty?: number
           serving_size?: string | null
+          sugar_g?: number | null
           user_id: string
         }
         Update: {
@@ -200,11 +208,15 @@ export type Database = {
           carbs_g?: number
           created_at?: string
           fat_g?: number
+          fibre_g?: number | null
           food_name?: string
           id?: string
           protein_g?: number
+          salt_g?: number | null
+          saturated_fat_g?: number | null
           serving_qty?: number
           serving_size?: string | null
+          sugar_g?: number | null
           user_id?: string
         }
         Relationships: []
@@ -218,12 +230,16 @@ export type Database = {
           created_at: string
           date: string
           fat_g: number
+          fibre_g: number | null
           food_name: string
           id: string
           meal_type: string
           protein_g: number
+          salt_g: number | null
+          saturated_fat_g: number | null
           serving_qty: number
           serving_size: string | null
+          sugar_g: number | null
           user_id: string
         }
         Insert: {
@@ -234,12 +250,16 @@ export type Database = {
           created_at?: string
           date?: string
           fat_g?: number
+          fibre_g?: number | null
           food_name: string
           id?: string
           meal_type?: string
           protein_g?: number
+          salt_g?: number | null
+          saturated_fat_g?: number | null
           serving_qty?: number
           serving_size?: string | null
+          sugar_g?: number | null
           user_id: string
         }
         Update: {
@@ -250,12 +270,16 @@ export type Database = {
           created_at?: string
           date?: string
           fat_g?: number
+          fibre_g?: number | null
           food_name?: string
           id?: string
           meal_type?: string
           protein_g?: number
+          salt_g?: number | null
+          saturated_fat_g?: number | null
           serving_qty?: number
           serving_size?: string | null
+          sugar_g?: number | null
           user_id?: string
         }
         Relationships: []
