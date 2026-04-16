@@ -557,9 +557,22 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
                       {favourites.map((food, i) => (
                         <button
                           key={`fav-${i}`}
-                          onClick={() => quickAdd(food)}
-                          disabled={quickAdding === food.food_name}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors text-left disabled:opacity-50"
+                          onClick={() => {
+                            const gMatch = (food.serving_size || "").match(/(\d+(?:\.\d+)?)\s*g\b/i);
+                            const parsedG = gMatch ? parseFloat(gMatch[1]) : null;
+                            selectFood({
+                              name: food.food_name,
+                              brand: food.brand || undefined,
+                              barcode: food.barcode || undefined,
+                              servingSize: food.serving_size || "100g",
+                              servingWeightG: (parsedG && parsedG !== 100) ? parsedG : null,
+                              calories: food.calories,
+                              protein: food.protein_g,
+                              carbs: food.carbs_g,
+                              fat: food.fat_g,
+                            });
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors text-left"
                         >
                           <div className="h-10 w-10 rounded-lg bg-amber-400/10 flex items-center justify-center shrink-0">
                             <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
