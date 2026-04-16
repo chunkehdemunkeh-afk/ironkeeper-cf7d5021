@@ -226,8 +226,8 @@ export default function WorkoutSession() {
   const [weightDownSuggestions, setWeightDownSuggestions] = useState<Record<string, number[]>>({});
   const [addedAccessories, setAddedAccessories] = useState<string[]>([]);
   const [bodyweightExercises, setBodyweightExercises] = useState<Set<string>>(new Set());
-  const [cableAttachments, setCableAttachments] = useState<Record<string, string>>({});
   const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [cableAttachments, setCableAttachments] = useState<Record<string, string>>({});
   const autoSaveKey = workout ? `workout-autosave-${workout.id}` : null;
 
   // Auto-save session state to localStorage
