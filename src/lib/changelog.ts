@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.27",
+    version: "1.6.28",
     date: "2026-04-16",
     title: "Updates & Fixes",
     changes: [
-      "Redesign expanded meal card to use a proper Nutrition Facts label",
+      "Fetch full nutrition from FatSecret for search results (sugar, fibre, sat fat, salt)",
     ],
   },
   {
