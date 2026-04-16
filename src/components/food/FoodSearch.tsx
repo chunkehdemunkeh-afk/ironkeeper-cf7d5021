@@ -213,6 +213,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
     setSaving(true);
     const qty = Math.max(0.1, parseFloat(servings) || 1);
     const multiplier = (servingGrams / 100) * qty;
+    const mul1 = (v: number | null) => v != null ? Math.round(v * multiplier * 10) / 10 : null;
     const foodData = {
       food_name: selected.name,
       brand: selected.brand || null,
@@ -222,6 +223,10 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
       protein_g: Math.round(basePro * multiplier * 10) / 10,
       carbs_g: Math.round(baseCarb * multiplier * 10) / 10,
       fat_g: Math.round(baseFat * multiplier * 10) / 10,
+      sugar_g: mul1(baseSugar),
+      fibre_g: mul1(baseFibre),
+      saturated_fat_g: mul1(baseSatFat),
+      salt_g: mul1(baseSalt),
       barcode: selected.barcode || null,
     };
 
@@ -301,6 +306,10 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
         protein_g: Math.round(food.protein * 10) / 10,
         carbs_g: Math.round(food.carbs * 10) / 10,
         fat_g: Math.round(food.fat * 10) / 10,
+        sugar_g: food.sugar ?? null,
+        fibre_g: food.fibre ?? null,
+        saturated_fat_g: food.saturatedFat ?? null,
+        salt_g: food.salt ?? null,
         barcode: food.barcode || null,
       });
       if (error) {
@@ -308,7 +317,7 @@ export default function FoodSearch({ open, onClose, mealType, date, onLogged, ed
         return;
       }
       setFavouriteNames((prev) => new Set(prev).add(key));
-      setFavourites((prev) => [{ food_name: food.name, brand: food.brand || null, serving_size: food.servingSize || "100g", serving_qty: 1, calories: Math.round(food.calories), protein_g: Math.round(food.protein * 10) / 10, carbs_g: Math.round(food.carbs * 10) / 10, fat_g: Math.round(food.fat * 10) / 10, barcode: food.barcode || null }, ...prev]);
+      setFavourites((prev) => [{ food_name: food.name, brand: food.brand || null, serving_size: food.servingSize || "100g", serving_qty: 1, calories: Math.round(food.calories), protein_g: Math.round(food.protein * 10) / 10, carbs_g: Math.round(food.carbs * 10) / 10, fat_g: Math.round(food.fat * 10) / 10, sugar_g: food.sugar ?? null, fibre_g: food.fibre ?? null, saturated_fat_g: food.saturatedFat ?? null, salt_g: food.salt ?? null, barcode: food.barcode || null }, ...prev]);
       toast.success("Added to favourites");
     }
   };
