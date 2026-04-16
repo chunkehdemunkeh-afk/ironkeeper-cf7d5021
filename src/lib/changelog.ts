@@ -12,12 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.24",
+    version: "1.6.25",
     date: "2026-04-16",
     title: "Updates & Fixes",
     changes: [
-      "Fix auto-changelog: use last auto-update commit as baseline, drop file-map fallbacks",
-      "Fix changelog: deduplicate entries, each version lists only new changes",
+      "Add full nutrition breakdown (sugar, fibre, sat fat, salt) to meal cards",
     ],
   },
   {
