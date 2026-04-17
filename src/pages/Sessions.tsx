@@ -112,6 +112,13 @@ const DEFAULT_PROGRAMME: { title: string; points: ProgrammePoint[] } = {
   ],
 };
 
+const SESSION_GROUPS = [
+  { label: "Goalkeeper", ids: ["power", "agility", "strength", "reflexes", "plyo"] },
+  { label: "Push / Pull / Legs", ids: ["push", "pull", "legs", "upper", "fullbody"] },
+  { label: "Strength Days", ids: ["squat", "bench", "deadlift", "press"] },
+  { label: "Arnold & Bro Split", ids: ["chest_back", "shoulders_arms", "chest", "back", "shoulders", "arms"] },
+];
+
 export default function Sessions() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -121,9 +128,69 @@ export default function Sessions() {
 
   const progInfo = prefs ? (PROGRAMME_INFO[prefs.splitId] ?? DEFAULT_PROGRAMME) : DEFAULT_PROGRAMME;
 
+  const groupedWorkouts = SESSION_GROUPS.map(group => ({
+    ...group,
+    workouts: allWorkouts.filter(w => group.ids.includes(w.id)),
+  })).filter(g => g.workouts.length > 0);
+
+  const ungroupedWorkouts = allWorkouts.filter(
+    w => !SESSION_GROUPS.flatMap(g => g.ids).includes(w.id)
+  );
+
+  const renderCard = (workout: typeof allWorkouts[0], i: number) => {
+    const Icon = workout.icon;
+    const visibleExercises = workout.exercises.slice(0, 4);
+    const overflow = workout.exercises.length - 4;
+    return (
+      <motion.button
+        key={workout.id}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: i * 0.04 }}
+        onClick={() => navigate(`/workout/${workout.id}`)}
+        className={`w-full glass-card rounded-2xl p-4 text-left transition-all hover:ring-1 hover:ring-primary/30 active:scale-[0.98] bg-gradient-to-br ${workout.color}`}
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-background/40 shrink-0">
+            <Icon className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-display text-base font-semibold text-foreground leading-tight">
+              {workout.name}
+            </h3>
+            <p className="text-[11px] text-muted-foreground">{workout.day}</p>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {workout.exercises.length} ex
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </div>
+        <div className="mt-2.5 flex gap-1.5 flex-wrap">
+          {visibleExercises.map((ex) => (
+            <span
+              key={ex.id}
+              className="rounded-md bg-background/25 px-2 py-0.5 text-[10px] font-medium text-foreground/70"
+            >
+              {ex.name}
+            </span>
+          ))}
+          {overflow > 0 && (
+            <span className="rounded-md bg-background/25 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+              +{overflow} more
+            </span>
+          )}
+        </div>
+      </motion.button>
+    );
+  };
+
+  let cardIndex = 0;
+
   return (
     <div className="min-h-screen bg-background safe-bottom">
-      <div className="mx-auto max-w-lg px-4 pt-6 pb-8 space-y-5">
+      <div className="mx-auto max-w-lg px-4 pt-6 pb-8 space-y-6">
         <div className="flex items-center justify-between">
           <motion.h1
             initial={{ opacity: 0 }}
@@ -140,50 +207,32 @@ export default function Sessions() {
           </button>
         </div>
 
-        <div className="space-y-3">
-          {allWorkouts.map((workout, i) => {
-            const Icon = workout.icon;
-            return (
-              <motion.button
-                key={workout.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.08 }}
-                onClick={() => navigate(`/workout/${workout.id}`)}
-                className={`w-full glass-card rounded-2xl p-4 text-left transition-all hover:ring-1 hover:ring-primary/30 active:scale-[0.98] bg-gradient-to-br ${workout.color}`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-background/40">
-                    <Icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-display text-base font-semibold text-foreground">
-                      {workout.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">{workout.day}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {workout.exercises.length} exercises
-                    </span>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
+        {groupedWorkouts.map((group) => (
+          <div key={group.label} className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                {group.label}
+              </span>
+              <div className="flex-1 h-px bg-border/40" />
+              <span className="text-[10px] text-muted-foreground/60">{group.workouts.length}</span>
+            </div>
+            {group.workouts.map((workout) => renderCard(workout, cardIndex++))}
+          </div>
+        ))}
 
-                <div className="mt-3 flex gap-1.5 flex-wrap">
-                  {workout.exercises.map((ex) => (
-                    <span
-                      key={ex.id}
-                      className="rounded-md bg-background/25 px-2 py-0.5 text-[10px] font-medium text-foreground/70"
-                    >
-                      {ex.name}
-                    </span>
-                  ))}
-                </div>
-              </motion.button>
-            );
-          })}
-        </div>
+        {ungroupedWorkouts.length > 0 && (
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                Custom
+              </span>
+              <div className="flex-1 h-px bg-border/40" />
+              <span className="text-[10px] text-muted-foreground/60">{ungroupedWorkouts.length}</span>
+            </div>
+            {ungroupedWorkouts.map((workout) => renderCard(workout, cardIndex++))}
+          </div>
+        )}
+
 
         {/* Programme info — dynamic per user's split */}
         <div className="glass-card rounded-2xl p-5 space-y-4">
