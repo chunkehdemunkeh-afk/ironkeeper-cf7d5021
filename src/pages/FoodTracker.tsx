@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { format, addDays, subDays } from "date-fns";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Settings, Trash2, Flame, Beef, Wheat, Droplets, CheckCircle2, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Settings, Trash2, CheckCircle2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
@@ -195,64 +195,63 @@ export default function FoodTracker() {
           animate={{ opacity: 1, y: 0 }}
           className="mx-4 p-4 rounded-2xl bg-card border border-border mb-4"
         >
-          {/* Calorie ring */}
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative h-24 w-24 shrink-0">
+          {/* Calorie ring — centred with flanking stats */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-center w-16">
+              <p className="text-xl font-display font-bold leading-none">{Math.round(totals.calories)}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Eaten</p>
+            </div>
+
+            <div className="relative h-28 w-28">
               <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
                 <path
                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   fill="none"
                   stroke="hsl(var(--secondary))"
-                  strokeWidth="3"
+                  strokeWidth="3.5"
                 />
                 <path
                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   fill="none"
                   stroke="hsl(var(--primary))"
-                  strokeWidth="3"
+                  strokeWidth="3.5"
                   strokeDasharray={`${pct(totals.calories, goals.calories)}, 100`}
                   strokeLinecap="round"
                   className="transition-all duration-500"
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <Flame className="h-3 w-3 text-primary" />
-                <span className="text-xs font-bold">{Math.round(totals.calories)}</span>
+                <p className="text-2xl font-display font-bold leading-none">
+                  {Math.max(0, goals.calories - Math.round(totals.calories))}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Remaining</p>
               </div>
             </div>
-            <div className="flex-1 space-y-1">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Remaining</p>
-              <p className="text-3xl font-display font-bold text-primary leading-none">
-                {Math.max(0, goals.calories - Math.round(totals.calories))}
-                <span className="text-base font-body font-medium ml-1">kcal</span>
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                {Math.round(totals.calories)} eaten · {goals.calories} goal
-              </p>
+
+            <div className="text-center w-16">
+              <p className="text-xl font-display font-bold leading-none">{goals.calories}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Goal</p>
             </div>
           </div>
 
           {/* Macros */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Protein", value: totals.protein, target: goals.protein_g, color: "bg-blue-400", icon: Beef },
-              { label: "Carbs", value: totals.carbs, target: goals.carbs_g, color: "bg-amber-400", icon: Wheat },
-              { label: "Fat", value: totals.fat, target: goals.fat_g, color: "bg-rose-400", icon: Droplets },
+              { label: "Carbs",   value: totals.carbs,   target: goals.carbs_g,   color: "bg-amber-400" },
+              { label: "Protein", value: totals.protein, target: goals.protein_g, color: "bg-primary" },
+              { label: "Fat",     value: totals.fat,     target: goals.fat_g,     color: "bg-rose-400" },
             ].map((m) => (
-              <div key={m.label} className="text-center">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <m.icon className="h-3 w-3 text-muted-foreground" />
+              <div key={m.label}>
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] text-muted-foreground">{m.label}</span>
+                  <span className="text-[10px] font-medium">{Math.round(m.value)} / {m.target}g</span>
                 </div>
-                <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-1">
+                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full ${m.color} transition-all duration-500`}
                     style={{ width: `${pct(m.value, m.target)}%` }}
                   />
                 </div>
-                <span className="text-[10px] font-medium">
-                  {Math.round(m.value)}g / {m.target}g
-                </span>
               </div>
             ))}
           </div>
