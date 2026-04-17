@@ -12,7 +12,7 @@
  *   have been running in the background for hours.
  */
 
-const CACHE_NAME = "ik-v2";
+const CACHE_NAME = "ik-v3";
 const ASSET_RE = /\.(?:js|css|woff2?|ttf|png|jpg|webp|svg|ico)$/;
 
 // ── Install: skip waiting so this SW activates immediately ────────────────────
@@ -20,16 +20,35 @@ self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
-// ── Activate: wipe old caches, claim all tabs ─────────────────────────────────
+// ── Activate: wipe old caches AND any cached HTML, claim all tabs ─────────────
+// Cached HTML is the #1 cause of "stale PWA" bugs on iOS — a brand-new SW
+// must never serve an old index.html from a previous deploy.
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys()
-      .then((names) =>
-        Promise.all(
-          names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n))
-        )
-      )
-      .then(() => self.clients.claim())
+    (async () => {
+      const names = await caches.keys();
+      await Promise.all(
+        names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n))
+      );
+      // Wipe any HTML responses cached by the previous SW version
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        const keys = await cache.keys();
+        await Promise.all(
+          keys
+            .filter((req) => {
+              const u = new URL(req.url);
+              return (
+                req.mode === "navigate" ||
+                u.pathname === "/" ||
+                u.pathname.endsWith(".html")
+              );
+            })
+            .map((req) => cache.delete(req))
+        );
+      } catch {}
+      await self.clients.claim();
+    })()
   );
 });
 
