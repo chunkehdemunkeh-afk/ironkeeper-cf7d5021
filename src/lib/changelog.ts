@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.36",
+    version: "1.6.37",
     date: "2026-04-17",
     title: "Updates & Fixes",
     changes: [
-      "Replace meal emojis with icons; make session groups collapsible",
+      "Update CLAUDE.md: font system, git workflow gotcha",
     ],
   },
   {
