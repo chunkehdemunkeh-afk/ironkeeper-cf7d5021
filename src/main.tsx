@@ -103,14 +103,28 @@ if (!isInIframe && !isPreviewHost) {
   setInterval(() => void pollVersion(), 60_000);
 
   // iOS PWAs freeze when backgrounded and often skip setInterval.
-  // Check immediately when the app comes back to the foreground.
+  // Check immediately when the app comes back to the foreground, AND
+  // re-run the pre-React version.json guard so a new deploy triggers a
+  // hard-reload-with-cache-bust without waiting for the next cold start.
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      void pollVersion();
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.ready.then((reg) => reg.update());
-      }
+    if (document.visibilityState !== "visible") return;
+    void pollVersion();
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready.then((reg) => reg.update());
     }
+    // Cross-check live deploy version
+    fetch(`/version.json?_=${Date.now()}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.version) return;
+        const stored = localStorage.getItem("ik-live-version");
+        if (stored && stored !== data.version) {
+          // Allow the pre-React guard to handle the actual reload on next boot
+          sessionStorage.removeItem("ik-version-checked");
+          applyUpdate();
+        }
+      })
+      .catch(() => {});
   });
 }
 
