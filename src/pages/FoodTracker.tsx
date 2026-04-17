@@ -197,7 +197,7 @@ export default function FoodTracker() {
         >
           {/* Calorie ring */}
           <div className="flex items-center gap-4 mb-4">
-            <div className="relative h-20 w-20 shrink-0">
+            <div className="relative h-24 w-24 shrink-0">
               <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
                 <path
                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -221,9 +221,10 @@ export default function FoodTracker() {
               </div>
             </div>
             <div className="flex-1 space-y-1">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Remaining</p>
-              <p className="text-xl font-bold text-primary leading-none">
-                {Math.max(0, goals.calories - Math.round(totals.calories))} kcal
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Remaining</p>
+              <p className="text-3xl font-display font-bold text-primary leading-none">
+                {Math.max(0, goals.calories - Math.round(totals.calories))}
+                <span className="text-base font-body font-medium ml-1">kcal</span>
               </p>
               <p className="text-[10px] text-muted-foreground">
                 {Math.round(totals.calories)} eaten · {goals.calories} goal

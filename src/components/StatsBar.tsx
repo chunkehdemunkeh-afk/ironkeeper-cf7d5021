@@ -129,7 +129,7 @@ export default function StatsBar() {
       icon: Target,
       value: `${thisWeek}/${weekGoal}`,
       label: "This Week",
-      color: thisWeek >= weekGoal ? "text-success" : "text-foreground",
+      color: thisWeek >= weekGoal ? "text-primary" : "text-foreground",
     },
     {
       icon: Dumbbell,

@@ -157,7 +157,7 @@ export default function WeekStrip() {
                 {day}
               </span>
               {hasWorkout ? (
-                <CheckCircle2 className="h-4.5 w-4.5 text-success" />
+                <CheckCircle2 className="h-4.5 w-4.5 text-primary" />
               ) : hasActivity ? (
                 <CheckCircle2 className={`h-4.5 w-4.5 ${isRestDay ? "text-blue-400" : "text-amber-400"}`} />
               ) : canLog ? (

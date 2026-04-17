@@ -21,10 +21,10 @@ const PERIOD_LABELS: Record<Period, string> = {
 };
 
 const METRIC_CONFIG: Record<Metric, { label: string; short: string; color: string; unit: string; areaOpacity: number }> = {
-  weight: { label: "Body Weight", short: "Body Weight", color: "hsl(280, 70%, 65%)", unit: "kg", areaOpacity: 0.2 },
-  calories: { label: "Calories", short: "Calories", color: "hsl(36, 95%, 55%)", unit: "kcal", areaOpacity: 0.3 },
-  water: { label: "Water Intake", short: "Water", color: "hsl(190, 85%, 55%)", unit: "L", areaOpacity: 0.2 },
-  volume: { label: "Total Lifted", short: "Volume", color: "hsl(140, 60%, 55%)", unit: "kg", areaOpacity: 0.2 },
+  weight: { label: "Body Weight", short: "Body Weight", color: "hsl(280, 70%, 70%)", unit: "kg", areaOpacity: 0.35 },
+  calories: { label: "Calories", short: "Calories", color: "hsl(36, 95%, 60%)", unit: "kcal", areaOpacity: 0.45 },
+  water: { label: "Water Intake", short: "Water", color: "hsl(190, 90%, 60%)", unit: "L", areaOpacity: 0.35 },
+  volume: { label: "Total Lifted", short: "Volume", color: "hsl(36, 95%, 60%)", unit: "kg", areaOpacity: 0.35 },
 };
 
 const tooltipStyle = {
@@ -284,8 +284,8 @@ export default function DailyReviewChart() {
               name={period === "week" ? selectedMetricConfig.label : `Avg ${selectedMetricConfig.label}`} 
               stroke={selectedMetricConfig.color} 
               fill="url(#metricGrad)" 
-              strokeWidth={2} 
-              connectNulls 
+              strokeWidth={2.5}
+              connectNulls
               dot={{ r: 4, strokeWidth: 0, fill: selectedMetricConfig.color }}
               activeDot={{ r: 6, strokeWidth: 0, fill: selectedMetricConfig.color }}
             />

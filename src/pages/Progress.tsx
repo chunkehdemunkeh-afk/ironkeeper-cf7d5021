@@ -92,7 +92,7 @@ export default function Progress() {
         <div className="grid grid-cols-3 gap-2">
           {[
             { icon: Dumbbell, label: "Workouts", value: history.length, color: "text-primary" },
-            { icon: Clock, label: "Total Mins", value: history.reduce((s, w) => s + w.duration, 0), color: "text-success" },
+            { icon: Clock, label: "Total Mins", value: history.reduce((s, w) => s + w.duration, 0), color: "text-primary" },
             { icon: TrendingUp, label: "Volume (kg)", value: totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume, color: "text-foreground" },
           ].map(({ icon: Icon, label, value, color }, i) => (
             <motion.div
@@ -151,7 +151,7 @@ export default function Progress() {
           className="glass-card rounded-xl p-4"
         >
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-success" />
+            <Calendar className="h-4 w-4 text-primary" />
             Weekly Frequency
           </h3>
           <div className="h-28">
@@ -164,7 +164,7 @@ export default function Progress() {
                   contentStyle={{ background: "hsl(220, 18%, 11%)", border: "1px solid hsl(220, 14%, 18%)", borderRadius: 12, fontSize: 12 }}
                   labelStyle={{ color: "hsl(40, 10%, 95%)" }}
                 />
-                <Bar dataKey="count" fill="hsl(142, 70%, 45%)" radius={[4, 4, 0, 0]} name="Sessions" />
+                <Bar dataKey="count" fill="hsl(36, 95%, 55%)" radius={[4, 4, 0, 0]} name="Sessions" />
               </BarChart>
             </ResponsiveContainer>
           </div>
