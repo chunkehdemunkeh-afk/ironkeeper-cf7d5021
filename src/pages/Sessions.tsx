@@ -1,8 +1,9 @@
 import { WORKOUTS } from "@/lib/workout-data";
 import { getAllCustomWorkouts } from "@/pages/WorkoutBuilder";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Plus, Dumbbell, Zap, Wind, Shield, Crosshair, ArrowUp, ArrowDown, Footprints, Layers, Flame, Trophy, Activity, Target } from "lucide-react";
-import { motion } from "framer-motion";
+import { ChevronRight, ChevronDown, Plus, Dumbbell, Zap, Wind, Shield, Crosshair, ArrowUp, ArrowDown, Footprints, Layers, Flame, Trophy, Activity, Target } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserPreferences } from "@/lib/user-preferences";
 import type { LucideIcon } from "lucide-react";
@@ -127,6 +128,14 @@ export default function Sessions() {
   const allWorkouts = [...WORKOUTS, ...customWorkouts];
 
   const progInfo = prefs ? (PROGRAMME_INFO[prefs.splitId] ?? DEFAULT_PROGRAMME) : DEFAULT_PROGRAMME;
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  const toggleGroup = (label: string) =>
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
 
   const groupedWorkouts = SESSION_GROUPS.map(group => ({
     ...group,
@@ -207,18 +216,39 @@ export default function Sessions() {
           </button>
         </div>
 
-        {groupedWorkouts.map((group) => (
-          <div key={group.label} className="space-y-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                {group.label}
-              </span>
-              <div className="flex-1 h-px bg-border/40" />
-              <span className="text-[10px] text-muted-foreground/60">{group.workouts.length}</span>
+        {groupedWorkouts.map((group) => {
+          const isOpen = expandedGroups.has(group.label);
+          return (
+            <div key={group.label}>
+              <button
+                onClick={() => toggleGroup(group.label)}
+                className="w-full flex items-center gap-2 py-1 group"
+              >
+                <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                  {group.label}
+                </span>
+                <div className="flex-1 h-px bg-border/40" />
+                <span className="text-[10px] text-muted-foreground/60 mr-1">{group.workouts.length}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+              </button>
+              <AnimatePresence initial={false}>
+                {isOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-2.5 pt-2.5">
+                      {group.workouts.map((workout) => renderCard(workout, cardIndex++))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            {group.workouts.map((workout) => renderCard(workout, cardIndex++))}
-          </div>
-        ))}
+          );
+        })}
 
         {ungroupedWorkouts.length > 0 && (
           <div className="space-y-2.5">

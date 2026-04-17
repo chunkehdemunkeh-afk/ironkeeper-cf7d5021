@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { format, addDays, subDays } from "date-fns";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Settings, Trash2, CheckCircle2, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Settings, Trash2, CheckCircle2, Copy, Sunrise, Sun, Moon, Apple, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,11 +48,11 @@ interface Goals {
   fat_g: number;
 }
 
-const MEALS: { type: MealType; label: string; icon: string }[] = [
-  { type: "breakfast", label: "Breakfast", icon: "🌅" },
-  { type: "lunch", label: "Lunch", icon: "☀️" },
-  { type: "dinner", label: "Dinner", icon: "🌙" },
-  { type: "snack", label: "Snacks", icon: "🍎" },
+const MEALS: { type: MealType; label: string; icon: LucideIcon }[] = [
+  { type: "breakfast", label: "Breakfast", icon: Sunrise },
+  { type: "lunch",     label: "Lunch",     icon: Sun },
+  { type: "dinner",    label: "Dinner",    icon: Moon },
+  { type: "snack",     label: "Snacks",    icon: Apple },
 ];
 
 export default function FoodTracker() {
@@ -302,7 +302,7 @@ export default function FoodTracker() {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-base">{meal.icon}</span>
+                      <meal.icon className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-semibold">{meal.label}</span>
                     </div>
                     {mealCals > 0 && (
