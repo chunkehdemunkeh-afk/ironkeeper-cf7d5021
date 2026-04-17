@@ -1068,28 +1068,26 @@ export default function WorkoutSession() {
                                         </button>
                                       </div>
                                     )}
+                                    {isCableAttachmentExercise(displayName) && (
+                                      <select
+                                        value={cableAttachments[ex.id] || ""}
+                                        onChange={(e) => setCableAttachments(prev => ({
+                                          ...prev,
+                                          [ex.id]: e.target.value,
+                                        }))}
+                                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium bg-muted/50 border-0 outline-none cursor-pointer transition-all ${
+                                          cableAttachments[ex.id]
+                                            ? "text-primary ring-1 ring-primary/30 bg-primary/15"
+                                            : "text-muted-foreground"
+                                        }`}
+                                      >
+                                        <option value="">Attachment</option>
+                                        {CABLE_ATTACHMENTS.map(att => (
+                                          <option key={att} value={att}>{att}</option>
+                                        ))}
+                                      </select>
+                                    )}
                                   </div>
-                                  {isCableAttachmentExercise(displayName) && (
-                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
-                                      <span className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wide shrink-0">Attachment</span>
-                                      {CABLE_ATTACHMENTS.map((att) => (
-                                        <button
-                                          key={att}
-                                          onClick={() => setCableAttachments(prev => ({
-                                            ...prev,
-                                            [ex.id]: prev[ex.id] === att ? "" : att,
-                                          }))}
-                                          className={`flex-none rounded-full px-2.5 py-1 text-[11px] font-medium transition-all select-none whitespace-nowrap ${
-                                            cableAttachments[ex.id] === att
-                                              ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                                              : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
-                                          }`}
-                                        >
-                                          {att}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
                                 </>
                               )}
                               <div className={`grid ${isTimeBased ? "grid-cols-[28px_1fr_36px]" : showWeight ? "grid-cols-[28px_1fr_1fr_36px]" : "grid-cols-[28px_1fr_36px]"} gap-x-1.5 items-center text-[10px] text-muted-foreground font-medium uppercase tracking-wider`}>
@@ -1292,34 +1290,31 @@ export default function WorkoutSession() {
                                               2H
                                             </button>
                                           )}
+                                          {isCableAttachmentExercise(displayName) && (
+                                            <select
+                                              value={cableAttachments[gExId] || ""}
+                                              onChange={(e) => setCableAttachments(prev => ({
+                                                ...prev,
+                                                [gExId]: e.target.value,
+                                              }))}
+                                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium bg-muted/50 border-0 outline-none cursor-pointer transition-all ${
+                                                cableAttachments[gExId]
+                                                  ? "text-primary ring-1 ring-primary/30 bg-primary/15"
+                                                  : "text-muted-foreground"
+                                              }`}
+                                            >
+                                              <option value="">Attachment</option>
+                                              {CABLE_ATTACHMENTS.map(att => (
+                                                <option key={att} value={att}>{att}</option>
+                                              ))}
+                                            </select>
+                                          )}
                                         </div>
                                       );
                                     }
                                     return null;
                                   })()}
                                 </div>
-                                {/* Attachment selector for cable/lat exercises in superset */}
-                                {isCableAttachmentExercise(displayName) && (
-                                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar mt-1">
-                                    <span className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wide shrink-0">Attachment</span>
-                                    {CABLE_ATTACHMENTS.map((att) => (
-                                      <button
-                                        key={att}
-                                        onClick={() => setCableAttachments(prev => ({
-                                          ...prev,
-                                          [gExId]: prev[gExId] === att ? "" : att,
-                                        }))}
-                                        className={`flex-none rounded-full px-2 py-0.5 text-[10px] font-medium transition-all select-none whitespace-nowrap ${
-                                          cableAttachments[gExId] === att
-                                            ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                                            : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
-                                        }`}
-                                      >
-                                        {att}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
                                 {(gOverride?.notes || gEx.notes) && (
                                   <p className="text-[11px] text-primary/80 bg-primary/5 rounded-lg px-2 py-1">{gOverride?.notes || gEx.notes}</p>
                                 )}
