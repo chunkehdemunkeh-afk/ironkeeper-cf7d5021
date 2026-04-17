@@ -30,6 +30,56 @@
 
   <body>
     <div id="root"></div>
+    <!--
+      Pre-React iOS PWA update guard.
+      Runs BEFORE the bundled JS executes. Compares the version embedded in this
+      HTML with /version.json fetched fresh from the network (no cache). If they
+      differ, the SW caches are wiped and the page is hard-reloaded with a
+      cache-buster — this is the only reliable way to defeat iOS's standalone
+      PWA HTML cache, which kept showing the old version on resume.
+    -->
+    <script>
+      (function () {
+        try {
+          // Skip in iframes / Lovable preview hosts — only run in the real PWA / live site
+          if (window.self !== window.top) return;
+          var h = location.hostname;
+          if (h.includes("lovableproject.com") || h.includes("id-preview--")) return;
+
+          // Avoid an infinite reload loop
+          if (sessionStorage.getItem("ik-version-checked") === "1") return;
+
+          fetch("/version.json?_=" + Date.now(), { cache: "no-store" })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+              if (!data || !data.version) return;
+              var stored = localStorage.getItem("ik-live-version");
+              if (stored && stored !== data.version) {
+                // New deploy detected — purge SW caches, then hard reload
+                sessionStorage.setItem("ik-version-checked", "1");
+                localStorage.setItem("ik-live-version", data.version);
+                localStorage.setItem("ik-just-updated", "1");
+                var done = function () {
+                  location.replace("/?_v=" + data.version);
+                };
+                if ("caches" in window) {
+                  caches.keys()
+                    .then(function (keys) {
+                      return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                    })
+                    .then(done, done);
+                } else {
+                  done();
+                }
+              } else {
+                if (!stored) localStorage.setItem("ik-live-version", data.version);
+                sessionStorage.setItem("ik-version-checked", "1");
+              }
+            })
+            .catch(function () { /* offline — ignore */ });
+        } catch (e) { /* never block app boot */ }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

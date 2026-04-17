@@ -14,6 +14,18 @@ const swBuildTimestampPlugin = () => ({
     if (fs.existsSync(swPath)) {
       fs.appendFileSync(swPath, `\n// IK_BUILD_STAMP: ${Date.now()}\n`);
     }
+    // Regenerate version.json every build so the iOS PWA pre-boot guard
+    // can detect a new deploy and hard-reload past the standalone cache.
+    const versionPath = path.resolve(__dirname, "dist/version.json");
+    const ts = Date.now();
+    fs.writeFileSync(
+      versionPath,
+      JSON.stringify(
+        { version: `1.${ts}`, buildTime: new Date(ts).toISOString() },
+        null,
+        2
+      )
+    );
   },
 });
 
