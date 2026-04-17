@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.32",
+    version: "1.6.33",
     date: "2026-04-17",
     title: "Updates & Fixes",
     changes: [
-      "Replace attachment pill buttons with inline dropdown",
+      "Design refresh: font, accent unification, chart visibility, calorie hero",
     ],
   },
   {
