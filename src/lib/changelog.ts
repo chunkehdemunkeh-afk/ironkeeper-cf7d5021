@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.35",
+    version: "1.6.36",
     date: "2026-04-17",
     title: "Updates & Fixes",
     changes: [
-      "Redesign calorie summary card with centred ring layout",
+      "Replace meal emojis with icons; make session groups collapsible",
     ],
   },
   {
