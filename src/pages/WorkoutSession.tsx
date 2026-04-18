@@ -625,7 +625,7 @@ export default function WorkoutSession() {
         }
       }
     }
-  }, [setLogs, exerciseOrder, allExercises]);
+  }, [setLogs, exerciseOrder, allExercises, exerciseOverrides, getEffectiveExId]);
 
   const updateSetField = useCallback(
     (exerciseId: string, setIdx: number, field: "reps" | "weight", value: number) => {
