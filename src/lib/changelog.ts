@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.41",
+    version: "1.6.42",
     date: "2026-04-18",
     title: "Updates & Fixes",
     changes: [
-      "Fix: expand swap search to all exercises + rename Flyes→Flies / Flye→Fly",
+      "Feat: add exercise to session + replace accessory emojis with icons",
     ],
   },
   {
