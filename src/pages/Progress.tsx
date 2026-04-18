@@ -1,18 +1,66 @@
 import { useAuth } from "@/hooks/useAuth";
-import { fetchWorkoutHistory, fetchVolumeData, fetchPersonalRecords } from "@/lib/cloud-data";
+import { fetchWorkoutHistory, fetchVolumeData, fetchPersonalRecords, deletePersonalRecord } from "@/lib/cloud-data";
 import { WORKOUTS, type CompletedWorkout } from "@/lib/workout-data";
-import { BarChart3, Trophy, Calendar, TrendingUp, Dumbbell, Clock } from "lucide-react";
-import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
+import { BarChart3, Trophy, Calendar, TrendingUp, Dumbbell, Clock, Trash2 } from "lucide-react";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import type { PanInfo } from "framer-motion";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import DailyReviewChart from "@/components/DailyReviewChart";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, CartesianGrid,
 } from "recharts";
 
+function PRSwipeRow({ exId, pr, onDelete }: { exId: string; pr: any; onDelete: () => void }) {
+  const x = useMotionValue(0);
+  const bgOpacity = useTransform(x, [-110, -40], [1, 0]);
+
+  function handleDragEnd(_: any, info: PanInfo) {
+    if (info.offset.x < -90) {
+      animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
+      onDelete();
+    } else {
+      animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
+    }
+  }
+
+  return (
+    <div className="relative overflow-hidden">
+      <motion.div
+        style={{ opacity: bgOpacity }}
+        className="absolute inset-0 flex items-center justify-end pr-4 bg-destructive rounded-lg"
+      >
+        <Trash2 className="h-4 w-4 text-white" />
+      </motion.div>
+      <motion.div
+        style={{ x, touchAction: "pan-y" }}
+        drag="x"
+        dragConstraints={{ left: -120, right: 0 }}
+        dragElastic={{ left: 0.1, right: 0 }}
+        onDragEnd={handleDragEnd}
+        className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0 bg-transparent"
+      >
+        <div>
+          <p className="text-sm font-medium text-foreground">
+            {pr.name || exId}
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            {new Date(pr.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-bold text-primary">{pr.weight}kg</p>
+          <p className="text-[10px] text-muted-foreground">{pr.reps} reps</p>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function Progress() {
   const { user } = useAuth();
-  
+  const queryClient = useQueryClient();
+
   const { data: history = [], isLoading: historyLoading } = useQuery({
     queryKey: ["workout-history", user?.id],
     queryFn: fetchWorkoutHistory,
@@ -53,7 +101,12 @@ export default function Progress() {
   }).reverse();
 
   const totalVolume = volumeData.reduce((sum, v) => sum + v.volume, 0);
-  const prList = Object.entries(prs).slice(0, 6);
+  const prList = Object.entries(prs);
+
+  async function handleDeletePR(setId: string) {
+    await deletePersonalRecord(setId);
+    queryClient.invalidateQueries({ queryKey: ["personal-records"] });
+  }
 
   const exerciseMap: Record<string, string> = {};
   WORKOUTS.forEach(w => w.exercises.forEach(ex => { exerciseMap[ex.id] = ex.name; }));
@@ -189,22 +242,15 @@ export default function Progress() {
               Complete workouts with weights to see your PRs here
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-0">
+              <p className="text-[10px] text-muted-foreground mb-2">Swipe left to delete an incorrect PR</p>
               {prList.map(([exId, pr]) => (
-                <div key={exId} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {(pr as any).name || exerciseMap[exId] || exId}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {new Date(pr.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-primary">{pr.weight}kg</p>
-                    <p className="text-[10px] text-muted-foreground">{pr.reps} reps</p>
-                  </div>
-                </div>
+                <PRSwipeRow
+                  key={exId}
+                  exId={exId}
+                  pr={{ ...(pr as any), name: (pr as any).name || exerciseMap[exId] || exId }}
+                  onDelete={() => handleDeletePR((pr as any).setId)}
+                />
               ))}
             </div>
           )}

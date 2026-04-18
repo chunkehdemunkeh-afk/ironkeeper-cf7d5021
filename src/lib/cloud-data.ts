@@ -130,27 +130,32 @@ export async function deleteWorkoutFromCloud(workoutId: string): Promise<boolean
 }
 
 // Fetch personal records (max weight per exercise)
-export async function fetchPersonalRecords(): Promise<Record<string, { weight: number; reps: number; date: string }>> {
+export async function fetchPersonalRecords(): Promise<Record<string, { weight: number; reps: number; date: string; name: string; setId: string }>> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return {};
 
   const { data: sets } = await supabase
     .from("workout_sets")
-    .select("exercise_id, exercise_name, reps, weight, created_at")
+    .select("id, exercise_id, exercise_name, reps, weight, created_at")
     .eq("user_id", user.id)
     .order("weight", { ascending: false });
 
   if (!sets) return {};
 
-  const prs: Record<string, { weight: number; reps: number; date: string; name: string }> = {};
+  const prs: Record<string, { weight: number; reps: number; date: string; name: string; setId: string }> = {};
   sets.forEach(s => {
     const w = Number(s.weight);
     if (!prs[s.exercise_id] || w > prs[s.exercise_id].weight) {
-      prs[s.exercise_id] = { weight: w, reps: s.reps, date: s.created_at, name: s.exercise_name };
+      prs[s.exercise_id] = { weight: w, reps: s.reps, date: s.created_at, name: s.exercise_name, setId: s.id };
     }
   });
 
   return prs;
+}
+
+export async function deletePersonalRecord(setId: string): Promise<boolean> {
+  const { error } = await supabase.from("workout_sets").delete().eq("id", setId);
+  return !error;
 }
 
 // Fetch volume data (total weight × reps per session)

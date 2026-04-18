@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **MANDATORY:** Read `PLAN.md` at the start of every session before making any changes. It contains active work status, architecture constraints, and decisions not visible in the code.
+
 ## Commands
 
 ```bash

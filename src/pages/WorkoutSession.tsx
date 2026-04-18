@@ -215,7 +215,9 @@ function ExerciseDragItem({
   );
 }
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchPersonalRecords } from "@/lib/cloud-data";
+import PRCelebration from "@/components/PRCelebration";
 
 export default function WorkoutSession() {
   const { id } = useParams<{ id: string }>();
@@ -267,6 +269,19 @@ export default function WorkoutSession() {
   const [addExerciseMuscle, setAddExerciseMuscle] = useState<string | null>(null);
   const [bodyweightExercises, setBodyweightExercises] = useState<Set<string>>(new Set());
   const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [celebrationPR, setCelebrationPR] = useState<{ name: string; weight: number; reps: number } | null>(null);
+
+  // Fetch historical PRs at session start for in-session comparison
+  const { data: historicalPRs = {} } = useQuery({
+    queryKey: ["personal-records", user?.id],
+    queryFn: fetchPersonalRecords,
+    enabled: !!user,
+    staleTime: Infinity,
+  });
+  const historicalPRsRef = useRef<Record<string, { weight: number }>>({});
+  useEffect(() => { historicalPRsRef.current = historicalPRs; }, [historicalPRs]);
+  const sessionBestRef = useRef<Record<string, number>>({}); // best weight hit this session
+
   const autoSaveKey = workout ? `workout-autosave-${workout.id}` : null;
 
   // Auto-save session state to localStorage
@@ -540,8 +555,19 @@ export default function WorkoutSession() {
         setRestTimerActive(true);
         setRestTimerKey((k) => k + 1);
 
-        // Determine rep thresholds based on exercise target range
+        // Check for new personal record
+        const currentWeight = sets[setIdx].weight;
         const exercise = allExercises.find(e => e.id === exerciseId);
+        if (currentWeight > 0 && exercise?.trackWeight !== false) {
+          const historicalBest = historicalPRsRef.current[exerciseId]?.weight ?? 0;
+          const sessionBest = sessionBestRef.current[exerciseId] ?? 0;
+          if (currentWeight > Math.max(historicalBest, sessionBest)) {
+            sessionBestRef.current[exerciseId] = currentWeight;
+            setCelebrationPR({ name: exercise?.name || exerciseId, weight: currentWeight, reps: sets[setIdx].reps });
+          }
+        }
+
+        // Determine rep thresholds based on exercise target range
         const isAccessoryRange = exercise?.reps?.includes("12-15");
         const upThreshold = isAccessoryRange ? 15 : 12;
         const downThreshold = isAccessoryRange ? 12 : 8;
@@ -1698,6 +1724,8 @@ export default function WorkoutSession() {
           </button>
         </div>
       </div>
+
+      <PRCelebration pr={celebrationPR} onDismiss={() => setCelebrationPR(null)} />
     </div>
   );
 }
