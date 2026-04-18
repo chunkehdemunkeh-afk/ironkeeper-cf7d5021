@@ -565,24 +565,27 @@ export default function WorkoutSession() {
       const currentWeight = newSets[setIdx].weight;
       const currentReps = newSets[setIdx].reps;
       const exercise = allExercises.find(e => e.id === exerciseId);
-      const isTimeBased = exercise?.repLabel === "Sec";
-      const tracksWeight = exercise?.trackWeight !== false;
+      const override = exerciseOverrides[exerciseId];
+      const effectiveId = getEffectiveExId(exerciseId);
+      const displayName = override?.name || exercise?.name || exerciseId;
+      const isTimeBased = (override?.repLabel || exercise?.repLabel) === "Sec";
+      const tracksWeight = (override?.trackWeight ?? exercise?.trackWeight) !== false;
 
-      // Check for new personal record (weight PR OR rep PR)
+      // Check for new personal record (weight PR OR rep PR) — keyed by effective (post-swap) ID
       if (!isTimeBased && currentReps > 0) {
-        const histWeight = historicalPRsRef.current[exerciseId]?.weight ?? 0;
-        const histReps = historicalPRsRef.current[exerciseId]?.bestReps ?? 0;
-        const sessBest = sessionBestRef.current[exerciseId] ?? { weight: 0, reps: 0 };
+        const histWeight = historicalPRsRef.current[effectiveId]?.weight ?? 0;
+        const histReps = historicalPRsRef.current[effectiveId]?.bestReps ?? 0;
+        const sessBest = sessionBestRef.current[effectiveId] ?? { weight: 0, reps: 0 };
 
         const isWeightPR = tracksWeight && currentWeight > 0 && currentWeight > Math.max(histWeight, sessBest.weight);
         const isRepPR = currentReps > Math.max(histReps, sessBest.reps);
 
         if (isWeightPR || isRepPR) {
-          sessionBestRef.current[exerciseId] = {
+          sessionBestRef.current[effectiveId] = {
             weight: Math.max(sessBest.weight, currentWeight),
             reps: Math.max(sessBest.reps, currentReps),
           };
-          setCelebrationPR({ name: exercise?.name || exerciseId, weight: currentWeight, reps: currentReps });
+          setCelebrationPR({ name: displayName, weight: currentWeight, reps: currentReps });
         }
       }
 
@@ -622,7 +625,7 @@ export default function WorkoutSession() {
         }
       }
     }
-  }, [setLogs, exerciseOrder, allExercises]);
+  }, [setLogs, exerciseOrder, allExercises, exerciseOverrides, getEffectiveExId]);
 
   const updateSetField = useCallback(
     (exerciseId: string, setIdx: number, field: "reps" | "weight", value: number) => {
