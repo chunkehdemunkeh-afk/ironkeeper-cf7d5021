@@ -59,8 +59,8 @@ npx supabase db push # Apply DB migrations to Supabase
 Migrations live in `supabase/migrations/` and must be pushed with `npx supabase db push`.
 
 **Static data (in-code, not DB):**
-- `src/lib/exercise-library.ts` — full exercise catalogue
-- `src/lib/exercise-substitutions.ts` — per-exercise swap options
+- `src/lib/exercise-library.ts` — exercise catalogue: 58 originals (`lib-1`–`lib-58`) + 717 imported from free-exercise-db (`lib-db-*`). **Do not re-import** — entries already exist.
+- `src/lib/exercise-substitutions.ts` — per-exercise swap options; keys map 1:1 to exercise IDs in `workout-data.ts` (e.g. `bk2` = Pull-Ups, `bk3` = Barbell Row). Keep in sync when IDs change.
 - `src/lib/accessory-routines.ts` — accessory workout definitions and substitutions
 - `src/lib/stretching-data.ts` — stretching/recovery routines
 - `src/lib/training-splits.ts` — built-in programme splits
@@ -70,7 +70,7 @@ Migrations live in `supabase/migrations/` and must be pushed with `npx supabase 
 - **Overlays:** use shadcn `Sheet` (bottom drawer), not `Dialog`, for overlays and detail views.
 - **Toasts:** use `sonner` (`import { toast } from "sonner"`) for all user feedback.
 - **Haptics:** call `hapticMedium()` / `hapticSuccess()` from `src/lib/haptics.ts` on significant interactions (set completion, save, delete). Uses the Vibration API — no-ops on desktop.
-- **Swipe gestures:** Framer Motion `drag="x"` with `dragConstraints` — already used in `WorkoutSession` and `FoodTracker`. Pair with `touchAction: "pan-y"` to preserve vertical scroll.
+- **Swipe gestures:** Framer Motion `drag="x"` with `dragConstraints` — used in `WorkoutSession`, `FoodTracker`, and `WorkoutBuilder`. Pair with `touchAction: "pan-y"` to preserve vertical scroll. When swipe-to-delete lives inside a `Reorder.Group`, set `dragListener={false}` on `Reorder.Item` and use `useDragControls` on the grip handle — otherwise the two drag axes conflict.
 - **Animations:** Framer Motion throughout — page transitions, list reordering (`Reorder`), collapse/expand. Keep motion consistent with existing patterns.
 
 ## Git Workflow
@@ -92,3 +92,9 @@ git stash && git pull --rebase origin main && git stash pop && git push origin m
 **PWA updates:** `main.tsx` polls `index.html` every 60s and triggers a reload when the hash changes. The service worker at `public/sw.js` also polls for updates. The auto-changelog workflow (`.github/workflows/auto-changelog.yml`) updates `src/lib/changelog.ts` on every push to `main`.
 
 **Food data** comes from the Open Food Facts API (`src/lib/open-food-facts.ts`) including barcode lookup. Extended nutrition fields are fetched synchronously at log time to guarantee they're saved.
+
+## Gotchas
+
+- **LucideIcon serialization:** LucideIcon components are `forwardRef` objects — `JSON.stringify` drops functions and Symbols, so `icon` becomes `{}` in localStorage. `getAllCustomWorkouts()` in `workout-data.ts` patches every loaded workout with `icon: Dumbbell` to fix this. Any code that stores or renders custom workout icons must account for it.
+- **Custom workout search pool:** `WorkoutBuilder.tsx` builds `ALL_EXERCISES` at module load from WORKOUTS + ACCESSORY_ROUTINES + EXERCISE_LIBRARY (deduplicated by lowercase name). If new exercise sources are added, include them in that build loop or they won't appear in the builder search.
+- **`exercise-substitutions.ts` key sync:** Substitution keys must match exercise IDs in `workout-data.ts` exactly. When an exercise ID changes, update the corresponding key in substitutions or the swap sheet silently shows nothing.

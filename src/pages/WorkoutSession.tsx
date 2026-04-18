@@ -29,6 +29,35 @@ import {
 
 type SetLog = { reps: number; weight: number; completed: boolean };
 
+// Combined search pool for swap sheet — includes all workout exercises + library
+const _swapSeen = new Set<string>();
+const ALL_SWAP_EXERCISES: { id: string; name: string; muscleGroup: string; equipment: string; description: string }[] = [];
+for (const w of WORKOUTS) {
+  for (const ex of w.exercises) {
+    const key = ex.name.toLowerCase();
+    if (!_swapSeen.has(key)) {
+      _swapSeen.add(key);
+      ALL_SWAP_EXERCISES.push({ id: ex.id, name: ex.name, muscleGroup: ex.targetMuscle, equipment: "", description: ex.notes || "" });
+    }
+  }
+}
+for (const r of ACCESSORY_ROUTINES) {
+  for (const ex of r.exercises) {
+    const key = ex.name.toLowerCase();
+    if (!_swapSeen.has(key)) {
+      _swapSeen.add(key);
+      ALL_SWAP_EXERCISES.push({ id: ex.id, name: ex.name, muscleGroup: ex.targetMuscle, equipment: "", description: ex.notes || "" });
+    }
+  }
+}
+for (const ex of EXERCISE_LIBRARY) {
+  const key = ex.name.toLowerCase();
+  if (!_swapSeen.has(key)) {
+    _swapSeen.add(key);
+    ALL_SWAP_EXERCISES.push({ id: ex.id, name: ex.name, muscleGroup: ex.muscleGroup, equipment: ex.equipment, description: ex.description || "" });
+  }
+}
+
 const CABLE_ATTACHMENTS = ["Handles", "V-Bar", "MAG Grip", "Straight Bar", "Rope", "Cuff & Lat Bar"] as const;
 type CableAttachment = typeof CABLE_ATTACHMENTS[number];
 
@@ -1509,7 +1538,7 @@ export default function WorkoutSession() {
                     />
                   </div>
                   {swapSearch.length > 1 && (() => {
-                    const libResults = EXERCISE_LIBRARY
+                    const libResults = ALL_SWAP_EXERCISES
                       .filter(ex => ex.name.toLowerCase().includes(swapSearch.toLowerCase()))
                       .slice(0, 10);
                     return libResults.length > 0 ? (
