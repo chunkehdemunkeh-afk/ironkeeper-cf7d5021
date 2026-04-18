@@ -4,7 +4,7 @@ import { WORKOUTS, type CompletedWorkout, type Exercise } from "@/lib/workout-da
 import { getAllCustomWorkouts } from "@/pages/WorkoutBuilder";
 import { saveWorkoutToCloud, fetchLastSessionData, fetchExerciseLastData } from "@/lib/cloud-data";
 import { ArrowLeft, Check, Timer, ChevronDown, ChevronUp, Trophy, Play, RotateCcw, TrendingUp, TrendingDown, GripVertical, Shuffle, Star, MessageSquare, Plus, Trash2, Flame, Grip, History, Search, Hand, Zap, Dumbbell } from "lucide-react";
-import { motion, AnimatePresence, Reorder, useDragControls, useMotionValue, useTransform, PanInfo } from "framer-motion";
+import { motion, animate, AnimatePresence, Reorder, useDragControls, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { toast } from "sonner";
 import RestTimer from "@/components/RestTimer";
 import ExerciseTimer from "@/components/ExerciseTimer";
@@ -118,16 +118,26 @@ function SwipeableSetRow({ children, onDelete }: { children: React.ReactNode; on
   );
 }
 
-function ExerciseDragItem({ 
-  exId, isExpanded, allDone, index, name, sets, reps, onToggleExpand, onPlayVideo, onSwap, hasSubs, lastSub, onDelete, children 
-}: { 
-  exId: string; isExpanded: boolean; allDone: boolean; index: number; name: string; sets: number; reps: string; 
+function ExerciseDragItem({
+  exId, isExpanded, allDone, index, name, sets, reps, onToggleExpand, onPlayVideo, onSwap, hasSubs, lastSub, onDelete, children
+}: {
+  exId: string; isExpanded: boolean; allDone: boolean; index: number; name: string; sets: number; reps: string;
   onToggleExpand: () => void; onPlayVideo: () => void; onSwap: () => void; hasSubs: boolean;
   lastSub?: { subName: string; subId: string };
   onDelete?: () => void;
   children: React.ReactNode;
 }) {
   const dragControls = useDragControls();
+  const swipeX = useMotionValue(0);
+
+  function handleSwipeDragEnd(_: any, info: PanInfo) {
+    if (onDelete && info.offset.x < -80) {
+      onDelete();
+    } else {
+      animate(swipeX, 0, { type: "spring", stiffness: 400, damping: 30 });
+    }
+  }
+
   return (
     <Reorder.Item
       value={exId}
@@ -136,81 +146,65 @@ function ExerciseDragItem({
       className={`glass-card rounded-xl overflow-hidden transition-all ${allDone ? "ring-1 ring-success/40 opacity-70" : ""}`}
       style={{ position: "relative" }}
     >
-      <div className="w-full flex items-center gap-2 p-3">
-        <div
-          onPointerDown={(e) => dragControls.start(e)}
-          className="flex h-8 w-6 items-center justify-center cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <GripVertical className="h-4 w-4" />
-        </div>
-        <button
-          onClick={onToggleExpand}
-          className="flex-1 flex items-center gap-3 text-left"
-        >
-          <span className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${allDone ? "bg-success/20 text-success" : "bg-primary/10 text-primary"}`}>
-            {allDone ? <Check className="h-3.5 w-3.5" /> : index + 1}
-          </span>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">{name}</p>
-            <p className="text-xs text-muted-foreground">{sets} × {reps}</p>
-            {lastSub && (
-              <div className="flex items-center gap-1 mt-0.5">
-                <Shuffle className="h-2.5 w-2.5 text-amber-400" />
-                <span className="text-[10px] text-amber-400 font-medium">
-                  Last session: {lastSub.subName}
-                </span>
-              </div>
-            )}
-          </div>
-        </button>
-        <button
-          onClick={onPlayVideo}
-          className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary mr-1"
-        >
-          <Play className="h-3 w-3" />
-        </button>
-        {hasSubs && (
-          <button
-            onClick={onSwap}
-            className="flex h-6 w-6 items-center justify-center rounded-md bg-accent/50 text-accent-foreground mr-1 hover:bg-accent transition-colors"
-            title="Swap exercise"
-          >
-            <Shuffle className="h-3 w-3" />
-          </button>
-        )}
+      {/* Swipe-to-delete: header row only */}
+      <div className="relative overflow-hidden">
         {onDelete && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button
-                onClick={(e) => e.stopPropagation()}
-                className="flex h-6 w-6 items-center justify-center rounded-md bg-destructive/10 text-destructive mr-1 hover:bg-destructive/20 transition-colors"
-                title="Remove exercise"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="max-w-sm rounded-2xl">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Remove exercise?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will remove <span className="font-medium text-foreground">{name}</span> and all its logged sets from this session.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={onDelete}
-                  className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Remove
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <div className="absolute inset-0 flex items-center justify-end pr-4 bg-destructive/80 rounded-t-xl">
+            <Trash2 className="h-4 w-4 text-white" />
+          </div>
         )}
-        <button onClick={onToggleExpand}>
-          {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-        </button>
+        <motion.div
+          style={{ x: swipeX, touchAction: "pan-y" }}
+          drag={onDelete ? "x" : false}
+          dragConstraints={{ left: -100, right: 0 }}
+          dragElastic={{ left: 0.1, right: 0 }}
+          onDragEnd={handleSwipeDragEnd}
+          className="relative bg-card/0 w-full flex items-center gap-2 p-3"
+        >
+          <div
+            onPointerDown={(e) => dragControls.start(e)}
+            className="flex h-8 w-6 items-center justify-center cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
+          <button
+            onClick={onToggleExpand}
+            className="flex-1 flex items-center gap-3 text-left"
+          >
+            <span className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${allDone ? "bg-success/20 text-success" : "bg-primary/10 text-primary"}`}>
+              {allDone ? <Check className="h-3.5 w-3.5" /> : index + 1}
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">{name}</p>
+              <p className="text-xs text-muted-foreground">{sets} × {reps}</p>
+              {lastSub && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Shuffle className="h-2.5 w-2.5 text-amber-400" />
+                  <span className="text-[10px] text-amber-400 font-medium">
+                    Last session: {lastSub.subName}
+                  </span>
+                </div>
+              )}
+            </div>
+          </button>
+          <button
+            onClick={onPlayVideo}
+            className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary mr-1"
+          >
+            <Play className="h-3 w-3" />
+          </button>
+          {hasSubs && (
+            <button
+              onClick={onSwap}
+              className="flex h-6 w-6 items-center justify-center rounded-md bg-accent/50 text-accent-foreground mr-1 hover:bg-accent transition-colors"
+            >
+              <Shuffle className="h-3 w-3" />
+            </button>
+          )}
+          <button onClick={onToggleExpand}>
+            {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </button>
+        </motion.div>
       </div>
       {children}
     </Reorder.Item>
