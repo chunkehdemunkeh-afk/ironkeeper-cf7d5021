@@ -280,9 +280,9 @@ export default function WorkoutSession() {
     enabled: !!user,
     staleTime: Infinity,
   });
-  const historicalPRsRef = useRef<Record<string, { weight: number }>>({});
-  useEffect(() => { historicalPRsRef.current = historicalPRs; }, [historicalPRs]);
-  const sessionBestRef = useRef<Record<string, number>>({}); // best weight hit this session
+  const historicalPRsRef = useRef<Record<string, { weight: number; bestReps: number }>>({});
+  useEffect(() => { historicalPRsRef.current = historicalPRs as any; }, [historicalPRs]);
+  const sessionBestRef = useRef<Record<string, { weight: number; reps: number }>>({}); // best hit this session
 
   const autoSaveKey = workout ? `workout-autosave-${workout.id}` : null;
 
@@ -563,15 +563,26 @@ export default function WorkoutSession() {
       setRestTimerKey(k => k + 1);
 
       const currentWeight = newSets[setIdx].weight;
+      const currentReps = newSets[setIdx].reps;
       const exercise = allExercises.find(e => e.id === exerciseId);
+      const isTimeBased = exercise?.repLabel === "Sec";
+      const tracksWeight = exercise?.trackWeight !== false;
 
-      // Check for new personal record
-      if (currentWeight > 0 && exercise?.trackWeight !== false) {
-        const historicalBest = historicalPRsRef.current[exerciseId]?.weight ?? 0;
-        const sessionBest = sessionBestRef.current[exerciseId] ?? 0;
-        if (currentWeight > Math.max(historicalBest, sessionBest)) {
-          sessionBestRef.current[exerciseId] = currentWeight;
-          setCelebrationPR({ name: exercise?.name || exerciseId, weight: currentWeight, reps: newSets[setIdx].reps });
+      // Check for new personal record (weight PR OR rep PR)
+      if (!isTimeBased && currentReps > 0) {
+        const histWeight = historicalPRsRef.current[exerciseId]?.weight ?? 0;
+        const histReps = historicalPRsRef.current[exerciseId]?.bestReps ?? 0;
+        const sessBest = sessionBestRef.current[exerciseId] ?? { weight: 0, reps: 0 };
+
+        const isWeightPR = tracksWeight && currentWeight > 0 && currentWeight > Math.max(histWeight, sessBest.weight);
+        const isRepPR = currentReps > Math.max(histReps, sessBest.reps);
+
+        if (isWeightPR || isRepPR) {
+          sessionBestRef.current[exerciseId] = {
+            weight: Math.max(sessBest.weight, currentWeight),
+            reps: Math.max(sessBest.reps, currentReps),
+          };
+          setCelebrationPR({ name: exercise?.name || exerciseId, weight: currentWeight, reps: currentReps });
         }
       }
 
