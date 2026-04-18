@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.43",
+    version: "1.6.44",
     date: "2026-04-18",
     title: "Updates & Fixes",
     changes: [
-      "Fix: swipe-to-delete on exercise cards in WorkoutSession",
+      "Fix: swipe-to-delete background starts invisible, fades in on swipe",
     ],
   },
   {
