@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { WORKOUTS, type CompletedWorkout } from "@/lib/workout-data";
 import { getAllCustomWorkouts } from "@/pages/WorkoutBuilder";
 import { saveWorkoutToCloud, fetchLastSessionData, fetchExerciseLastData } from "@/lib/cloud-data";
-import { ArrowLeft, Check, Timer, ChevronDown, ChevronUp, Trophy, Play, RotateCcw, TrendingUp, TrendingDown, GripVertical, Shuffle, Star, MessageSquare, Plus, Trash2, Flame, Grip, History } from "lucide-react";
+import { ArrowLeft, Check, Timer, ChevronDown, ChevronUp, Trophy, Play, RotateCcw, TrendingUp, TrendingDown, GripVertical, Shuffle, Star, MessageSquare, Plus, Trash2, Flame, Grip, History, Search } from "lucide-react";
 import { motion, AnimatePresence, Reorder, useDragControls, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { toast } from "sonner";
 import RestTimer from "@/components/RestTimer";
@@ -11,6 +11,7 @@ import ExerciseTimer from "@/components/ExerciseTimer";
 import ExerciseVideoSheet from "@/components/ExerciseVideoSheet";
 import { hapticMedium, hapticSuccess } from "@/lib/haptics";
 import { EXERCISE_SUBSTITUTIONS, type SubstituteExercise } from "@/lib/exercise-substitutions";
+import { EXERCISE_LIBRARY } from "@/lib/exercise-library";
 import { ACCESSORY_ROUTINES, ACCESSORY_SUBSTITUTIONS } from "@/lib/accessory-routines";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -205,6 +206,7 @@ export default function WorkoutSession() {
   const [sessionNotes, setSessionNotes] = useState("");
   const [restTimerActive, setRestTimerActive] = useState(false);
   const [swapExerciseId, setSwapExerciseId] = useState<string | null>(null);
+  const [swapSearch, setSwapSearch] = useState("");
   const [exerciseOverrides, setExerciseOverrides] = useState<Record<string, { name: string; notes?: string; targetMuscle: string; trackWeight?: boolean; repLabel?: string; weightLabel?: string; substituteId?: string }>>({});
   // Substitutions used in the PREVIOUS session for this workout (for visual cue)
   const [lastSubstitutions, setLastSubstitutions] = useState<Record<string, { subName: string; subId: string }>>({}); 
@@ -933,7 +935,7 @@ export default function WorkoutSession() {
             const override = exerciseOverrides[ex.id];
             const displayName = override?.name || ex.name;
             const allSubs = { ...EXERCISE_SUBSTITUTIONS, ...ACCESSORY_SUBSTITUTIONS };
-            const hasSubs = !!(allSubs[ex.id] && allSubs[ex.id].length > 0);
+            const hasSubs = true; // library search available for all exercises
             const ssInfo = supersetMap[ex.id];
 
             const exerciseCard = (
@@ -1420,31 +1422,28 @@ export default function WorkoutSession() {
       />
 
       {/* Swap Exercise Sheet */}
-      <Sheet open={!!swapExerciseId} onOpenChange={(open) => !open && setSwapExerciseId(null)}>
-        <SheetContent side="bottom" className="rounded-t-2xl bg-card border-border/50 max-h-[60vh]">
+      <Sheet open={!!swapExerciseId} onOpenChange={(open) => { if (!open) { setSwapExerciseId(null); setSwapSearch(""); } }}>
+        <SheetContent side="bottom" className="rounded-t-2xl bg-card border-border/50 max-h-[80vh]">
           <SheetHeader>
             <SheetTitle className="font-display text-lg text-foreground flex items-center gap-2">
               <Shuffle className="h-4 w-4 text-primary" />
               Swap Exercise
             </SheetTitle>
           </SheetHeader>
-          <div className="mt-3 space-y-2 overflow-y-auto max-h-[40vh] pb-4">
+          <div className="mt-3 space-y-2 overflow-y-auto max-h-[65vh] pb-6">
             {swapExerciseId && (
               <>
-                {/* Original exercise option */}
+                {/* Restore original */}
                 {exerciseOverrides[swapExerciseId] && (() => {
                   const origEx = allExercises.find(e => e.id === swapExerciseId);
                   return origEx ? (
                     <button
                       onClick={() => {
-                        setExerciseOverrides(prev => {
-                          const next = { ...prev };
-                          delete next[swapExerciseId];
-                          return next;
-                        });
+                        setExerciseOverrides(prev => { const next = { ...prev }; delete next[swapExerciseId]; return next; });
                         setSwapExerciseId(null);
+                        setSwapSearch("");
                         hapticMedium();
-                        toast.success(`Swapped back to ${origEx.name}`);
+                        toast.success(`Restored ${origEx.name}`);
                       }}
                       className="w-full text-left rounded-xl bg-secondary/50 p-3 hover:bg-secondary/70 transition-colors border border-border/30"
                     >
@@ -1457,49 +1456,98 @@ export default function WorkoutSession() {
                     </button>
                   ) : null;
                 })()}
-                {/* Substitute options */}
-                {([...( EXERCISE_SUBSTITUTIONS[swapExerciseId] || []), ...(ACCESSORY_SUBSTITUTIONS[swapExerciseId] || [])]).map((sub) => {
-                  const isActive = exerciseOverrides[swapExerciseId]?.name === sub.name;
-                  return (
-                    <button
-                      key={sub.id}
-                      onClick={async () => {
-                        setExerciseOverrides(prev => ({
-                          ...prev,
-                          [swapExerciseId]: {
-                            name: sub.name,
-                            notes: sub.notes,
-                            targetMuscle: sub.targetMuscle,
-                            trackWeight: sub.trackWeight,
-                            repLabel: sub.repLabel,
-                            weightLabel: sub.weightLabel,
-                            substituteId: sub.id,
-                          },
-                        }));
-                        // Fetch last data for this specific substitute exercise
-                        if (!lastSessionData[sub.id]) {
-                          const subData = await fetchExerciseLastData(sub.id);
-                          if (subData.length > 0) {
-                            setLastSessionData(prev => ({ ...prev, [sub.id]: subData }));
-                          }
-                        }
-                        setSwapExerciseId(null);
-                        hapticMedium();
-                        toast.success(`Swapped to ${sub.name}`);
-                      }}
-                      disabled={isActive}
-                      className={`w-full text-left rounded-xl p-3 transition-colors border ${isActive ? "bg-primary/10 border-primary/30" : "bg-secondary/50 border-border/30 hover:bg-secondary/70"}`}
-                    >
-                      <p className="text-sm font-medium text-foreground">{sub.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{sub.description}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">{sub.targetMuscle}</span>
-                        {sub.notes && <span className="text-[10px] text-primary/70">{sub.notes}</span>}
+
+                {/* Curated substitutes */}
+                {([...(EXERCISE_SUBSTITUTIONS[swapExerciseId] || []), ...(ACCESSORY_SUBSTITUTIONS[swapExerciseId] || [])]).length > 0 && (
+                  <>
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide pt-1">Suggested</p>
+                    {([...(EXERCISE_SUBSTITUTIONS[swapExerciseId] || []), ...(ACCESSORY_SUBSTITUTIONS[swapExerciseId] || [])]).map((sub) => {
+                      const isActive = exerciseOverrides[swapExerciseId]?.substituteId === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={async () => {
+                            setExerciseOverrides(prev => ({
+                              ...prev,
+                              [swapExerciseId]: { name: sub.name, notes: sub.notes, targetMuscle: sub.targetMuscle, trackWeight: sub.trackWeight, repLabel: sub.repLabel, weightLabel: sub.weightLabel, substituteId: sub.id },
+                            }));
+                            if (!lastSessionData[sub.id]) {
+                              const subData = await fetchExerciseLastData(sub.id);
+                              if (subData.length > 0) setLastSessionData(prev => ({ ...prev, [sub.id]: subData }));
+                            }
+                            setSwapExerciseId(null);
+                            setSwapSearch("");
+                            hapticMedium();
+                            toast.success(`Swapped to ${sub.name}`);
+                          }}
+                          disabled={isActive}
+                          className={`w-full text-left rounded-xl p-3 transition-colors border ${isActive ? "bg-primary/10 border-primary/30" : "bg-secondary/50 border-border/30 hover:bg-secondary/70"}`}
+                        >
+                          <p className="text-sm font-medium text-foreground">{sub.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{sub.description}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">{sub.targetMuscle}</span>
+                            {sub.notes && <span className="text-[10px] text-primary/70 truncate">{sub.notes}</span>}
+                          </div>
+                          {isActive && <span className="text-[10px] text-primary font-medium mt-1 block">Currently selected</span>}
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* Library search */}
+                <div className="pt-2">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Search Library</p>
+                  <div className="relative mb-2">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                    <input
+                      value={swapSearch}
+                      onChange={(e) => setSwapSearch(e.target.value)}
+                      placeholder="Search 700+ exercises..."
+                      className="w-full h-9 rounded-xl bg-muted/50 border border-border/50 pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/50"
+                    />
+                  </div>
+                  {swapSearch.length > 1 && (() => {
+                    const libResults = EXERCISE_LIBRARY
+                      .filter(ex => ex.name.toLowerCase().includes(swapSearch.toLowerCase()))
+                      .slice(0, 10);
+                    return libResults.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {libResults.map((ex) => {
+                          const isActive = exerciseOverrides[swapExerciseId]?.substituteId === ex.id;
+                          return (
+                            <button
+                              key={ex.id}
+                              onClick={() => {
+                                setExerciseOverrides(prev => ({
+                                  ...prev,
+                                  [swapExerciseId]: { name: ex.name, targetMuscle: ex.muscleGroup, substituteId: ex.id },
+                                }));
+                                setSwapExerciseId(null);
+                                setSwapSearch("");
+                                hapticMedium();
+                                toast.success(`Swapped to ${ex.name}`);
+                              }}
+                              disabled={isActive}
+                              className={`w-full text-left rounded-xl p-3 transition-colors border ${isActive ? "bg-primary/10 border-primary/30" : "bg-secondary/50 border-border/30 hover:bg-secondary/70"}`}
+                            >
+                              <p className="text-sm font-medium text-foreground">{ex.name}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{ex.description}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">{ex.muscleGroup}</span>
+                                <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">{ex.equipment}</span>
+                              </div>
+                              {isActive && <span className="text-[10px] text-primary font-medium mt-1 block">Currently selected</span>}
+                            </button>
+                          );
+                        })}
                       </div>
-                      {isActive && <span className="text-[10px] text-primary font-medium mt-1 block">Currently selected</span>}
-                    </button>
-                  );
-                })}
+                    ) : (
+                      <p className="text-xs text-muted-foreground text-center py-4">No exercises found</p>
+                    );
+                  })()}
+                </div>
               </>
             )}
           </div>

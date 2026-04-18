@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, animate } from "framer-motion";
+import type { PanInfo } from "framer-motion";
 import { format, addDays, subDays } from "date-fns";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Settings, Trash2, CheckCircle2, Copy, Sunrise, Sun, Moon, Apple, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,36 @@ const MEALS: { type: MealType; label: string; icon: LucideIcon }[] = [
   { type: "dinner",    label: "Dinner",    icon: Moon },
   { type: "snack",     label: "Snacks",    icon: Apple },
 ];
+
+function SwipeableRow({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
+  const x = useMotionValue(0);
+
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (info.offset.x < -72) {
+      onDelete();
+    } else {
+      animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden">
+      <div className="absolute inset-y-0 right-0 flex items-center px-4 bg-destructive">
+        <Trash2 className="h-4 w-4 text-white" />
+      </div>
+      <motion.div
+        style={{ x, touchAction: "pan-y" }}
+        drag="x"
+        dragConstraints={{ left: -100, right: 0 }}
+        dragElastic={{ left: 0.15, right: 0 }}
+        onDragEnd={handleDragEnd}
+        className="relative bg-card"
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+}
 
 export default function FoodTracker() {
   const { user } = useAuth();
@@ -342,20 +373,19 @@ export default function FoodTracker() {
                 {!isExpanded && mealLogs.length > 0 && (
                   <div className="border-t border-border">
                     {mealLogs.map((log) => (
-                      <div
-                        key={log.id}
-                        className="flex items-center justify-between px-3 py-2 border-b border-border/50 last:border-0"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium truncate">{log.food_name}</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {log.serving_qty} × {log.serving_size || "100g"}
-                          </p>
+                      <SwipeableRow key={log.id} onDelete={() => deleteLog(log.id)}>
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-border/50 last:border-0">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium truncate">{log.food_name}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {log.serving_qty} × {log.serving_size || "100g"}
+                            </p>
+                          </div>
+                          <span className="text-xs font-semibold text-primary shrink-0 ml-2">
+                            {Math.round(log.calories)} kcal
+                          </span>
                         </div>
-                        <span className="text-xs font-semibold text-primary shrink-0 ml-2">
-                          {Math.round(log.calories)} kcal
-                        </span>
-                      </div>
+                      </SwipeableRow>
                     ))}
                   </div>
                 )}
@@ -441,30 +471,23 @@ export default function FoodTracker() {
                         {/* Food items with edit/delete */}
                         <div className="border-t-4 border-border">
                           {mealLogs.map((log) => (
-                            <div
-                              key={log.id}
-                              className="flex items-center justify-between px-3 py-2.5 border-b border-border/50 last:border-0 cursor-pointer active:bg-secondary/50 transition-colors"
-                              onClick={() => {
-                                setEditingLog({ id: log.id, mealType: meal.type, log });
-                                setSearchMeal(meal.type);
-                              }}
-                            >
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-medium truncate">{log.food_name}</p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {log.serving_qty} × {log.serving_size || "100g"}
-                                </p>
+                            <SwipeableRow key={log.id} onDelete={() => deleteLog(log.id)}>
+                              <div
+                                className="flex items-center justify-between px-3 py-2.5 border-b border-border/50 last:border-0 cursor-pointer active:bg-secondary/50 transition-colors"
+                                onClick={() => {
+                                  setEditingLog({ id: log.id, mealType: meal.type, log });
+                                  setSearchMeal(meal.type);
+                                }}
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-medium truncate">{log.food_name}</p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {log.serving_qty} × {log.serving_size || "100g"}
+                                  </p>
+                                </div>
+                                <span className="text-xs font-semibold text-primary shrink-0">{Math.round(log.calories)} kcal</span>
                               </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="text-xs font-semibold text-primary">{Math.round(log.calories)} kcal</span>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); deleteLog(log.id); }}
-                                  className="text-muted-foreground hover:text-destructive transition-colors"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                            </div>
+                            </SwipeableRow>
                           ))}
                         </div>
                       </>

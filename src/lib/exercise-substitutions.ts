@@ -139,8 +139,8 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
     { id: "sub-pu4b", name: "Pec Deck Machine", targetMuscle: "Chest", notes: "Machine fly, squeeze and hold at peak contraction", description: "Pec deck machine fly" },
   ],
   pu5: [ // X-Over Cable Tricep Extensions
-    { id: "sub-pu5a", name: "Tricep Rope Pushdown", targetMuscle: "Triceps", notes: "Rope attachment, spread at the bottom", description: "Cable rope tricep pushdown" },
-    { id: "sub-pu5b", name: "Straight Bar Pushdown", targetMuscle: "Triceps", notes: "Straight or EZ bar attachment, strict elbows", description: "Cable straight bar tricep pushdown" },
+    { id: "sub-pu5a", name: "Tricep Pushdown", targetMuscle: "Triceps", notes: "Rope attachment, spread at the bottom", description: "Cable rope tricep pushdown" },
+    { id: "sub-pu5b", name: "Tricep Pushdown", targetMuscle: "Triceps", notes: "Straight or EZ bar attachment, strict elbows", description: "Cable straight bar tricep pushdown" },
   ],
   pu6: [ // Single Arm Overhead Cable Tricep Extensions
     { id: "sub-pu6a", name: "Overhead Dumbbell Tricep Extension", targetMuscle: "Triceps", notes: "Single arm, lower behind head, full stretch", description: "Single-arm overhead dumbbell extension" },
@@ -170,7 +170,7 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
   ],
   pl6: [ // Dumbbell Preacher Hammer Curls
     { id: "sub-pl6a", name: "Cross-Body Hammer Curl", targetMuscle: "Biceps", notes: "Curl dumbbell across body, neutral grip", description: "Cross-body dumbbell hammer curl" },
-    { id: "sub-pl6b", name: "Rope Hammer Curl (Cable)", targetMuscle: "Biceps", notes: "Rope attachment on low cable, hammer grip curl", description: "Cable rope hammer curl" },
+    { id: "sub-pl6b", name: "Cable Hammer Curl", targetMuscle: "Biceps", notes: "Rope attachment on low cable, hammer grip curl", description: "Cable rope hammer curl" },
   ],
 
   // ── Legs ──
@@ -200,7 +200,7 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
   ],
 
   // ── Upper ──
-  up1: [ // Seated Cable Row - V Bar
+  up1: [ // Seated Cable Row
     { id: "sub-up1a", name: "Seated Cable Row - Wide Grip", targetMuscle: "Mid Back", notes: "Wide grip bar, pull to lower chest", description: "Wide-grip cable seated row" },
     { id: "sub-up1b", name: "Chest-Supported Dumbbell Row", targetMuscle: "Mid Back", notes: "Lie chest down on incline bench, row dumbbells", description: "Incline chest-supported dumbbell row" },
   ],
@@ -226,10 +226,10 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
   ],
   up7: [ // Dumbbell Preacher Hammer Curls (same subs as pl6)
     { id: "sub-up7a", name: "Cross-Body Hammer Curl", targetMuscle: "Biceps", notes: "Curl dumbbell across body, neutral grip", description: "Cross-body dumbbell hammer curl" },
-    { id: "sub-up7b", name: "Rope Hammer Curl (Cable)", targetMuscle: "Biceps", notes: "Rope attachment on low cable, hammer grip curl", description: "Cable rope hammer curl" },
+    { id: "sub-up7b", name: "Cable Hammer Curl", targetMuscle: "Biceps", notes: "Rope attachment on low cable, hammer grip curl", description: "Cable rope hammer curl" },
   ],
   up8: [ // Tricep Push Down - Rope
-    { id: "sub-up8a", name: "Tricep Push Down - V Bar", targetMuscle: "Triceps", notes: "V-bar attachment, lock elbows, squeeze at bottom", description: "V-bar cable tricep pushdown" },
+    { id: "sub-up8a", name: "Tricep Pushdown", targetMuscle: "Triceps", notes: "V-bar attachment, lock elbows, squeeze at bottom", description: "V-bar cable tricep pushdown" },
     { id: "sub-up8b", name: "Dumbbell Skull Crusher", targetMuscle: "Triceps", notes: "Lie flat, lower dumbbells to forehead, extend", description: "Lying dumbbell skull crushers" },
   ],
 
@@ -248,7 +248,7 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
   ],
   fb4: [ // Barbell Row
     { id: "sub-fb4a", name: "Single Arm Dumbbell Row", targetMuscle: "Back", notes: "Brace on bench, pull dumbbell to hip — great unilateral alternative", description: "Single-arm dumbbell row" },
-    { id: "sub-fb4b", name: "Seated Cable Row - V Bar", targetMuscle: "Back", notes: "Cable row with V-bar, pull to lower chest, squeeze shoulder blades", description: "Cable seated row with V-bar" },
+    { id: "sub-fb4b", name: "Seated Cable Row", targetMuscle: "Back", notes: "Cable row with V-bar, pull to lower chest, squeeze shoulder blades", description: "Cable seated row with V-bar" },
   ],
   fb5: [ // Overhead Press
     { id: "sub-fb5a", name: "Dumbbell Shoulder Press", targetMuscle: "Shoulders", notes: "Seated or standing, press to full lockout — easier to balance than barbell", description: "Dumbbell overhead shoulder press" },
@@ -307,7 +307,7 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
     { id: "sub-bn5b", name: "Close-Grip Bench Press", targetMuscle: "Triceps", notes: "Hands shoulder-width, same pressing mechanics — heavier alternative", description: "Close-grip barbell bench press" },
   ],
   bn6: [ // X-Over Cable Tricep Extensions
-    { id: "sub-bn6a", name: "Tricep Rope Pushdown", targetMuscle: "Triceps", notes: "Rope attachment, spread rope at the bottom for extra contraction", description: "Cable rope tricep pushdown" },
+    { id: "sub-bn6a", name: "Tricep Pushdown", targetMuscle: "Triceps", notes: "Rope attachment, spread rope at the bottom for extra contraction", description: "Cable rope tricep pushdown" },
     { id: "sub-bn6b", name: "Cable Kickback", targetMuscle: "Triceps", notes: "Hinge forward, extend arm back fully, squeeze at top", description: "Single-arm cable tricep kickback" },
   ],
 
@@ -330,7 +330,7 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
   ],
   dl5: [ // Single Arm Dumbbell Row
     { id: "sub-dl5a", name: "T-Bar Row", targetMuscle: "Lats/Mid Back", notes: "Both arms — load heavier with the T-bar for volume work", description: "T-bar row" },
-    { id: "sub-dl5b", name: "Seated Cable Row - V Bar", targetMuscle: "Lats/Mid Back", notes: "Good mid-back alternative with constant cable tension", description: "Seated cable row with V-bar" },
+    { id: "sub-dl5b", name: "Seated Cable Row", targetMuscle: "Lats/Mid Back", notes: "Good mid-back alternative with constant cable tension", description: "Seated cable row with V-bar" },
   ],
   dl6: [ // Face Pulls
     { id: "sub-dl6a", name: "Band Pull-Apart", targetMuscle: "Rear Delts", notes: "Pull band apart at chest height — great warm-up or finisher", trackWeight: false, repLabel: "Reps", description: "Resistance band pull-apart" },
@@ -384,7 +384,7 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
     { id: "sub-cb5a", name: "Flat Dumbbell Flies", targetMuscle: "Chest", notes: "Classic dumbbell fly — good stretch at bottom", description: "Flat dumbbell fly" },
     { id: "sub-cb5b", name: "Pec Deck Machine", targetMuscle: "Chest", notes: "Machine fly — squeeze and hold at peak contraction", description: "Pec deck machine" },
   ],
-  cb6: [ // Seated Cable Row - V Bar
+  cb6: [ // Seated Cable Row
     { id: "sub-cb6a", name: "Single Arm Dumbbell Row", targetMuscle: "Mid Back", notes: "Unilateral — each side works independently", description: "Single-arm dumbbell row" },
     { id: "sub-cb6b", name: "Machine Row", targetMuscle: "Mid Back", notes: "Chest-supported machine — removes lower back involvement", description: "Chest-supported machine row" },
   ],
@@ -408,10 +408,10 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
   ],
   sa5: [ // Dumbbell Preacher Hammer Curls
     { id: "sub-sa5a", name: "Cross-Body Hammer Curl", targetMuscle: "Biceps", notes: "Curl dumbbell across body to opposite shoulder — neutral grip", description: "Cross-body dumbbell hammer curl" },
-    { id: "sub-sa5b", name: "Rope Hammer Curl (Cable)", targetMuscle: "Biceps", notes: "Rope on low cable, neutral grip — constant tension", description: "Cable rope hammer curl" },
+    { id: "sub-sa5b", name: "Cable Hammer Curl", targetMuscle: "Biceps", notes: "Rope on low cable, neutral grip — constant tension", description: "Cable rope hammer curl" },
   ],
   sa6: [ // Tricep Push Down - Rope
-    { id: "sub-sa6a", name: "Tricep Push Down - V Bar", targetMuscle: "Triceps", notes: "V-bar attachment — slight overhand grip, lock elbows in", description: "V-bar cable tricep pushdown" },
+    { id: "sub-sa6a", name: "Tricep Pushdown", targetMuscle: "Triceps", notes: "V-bar attachment — slight overhand grip, lock elbows in", description: "V-bar cable tricep pushdown" },
     { id: "sub-sa6b", name: "Skull Crushers", targetMuscle: "Triceps", notes: "Barbell or dumbbell — great compound tricep movement", description: "Skull crushers" },
   ],
 
@@ -442,6 +442,10 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
   ],
 
   // ── Bro Split — Back Day ─────────────────────────────────────────────────
+  bk2: [ // Pull-Ups
+    { id: "sub-bk2-a", name: "Lat Pull Down - Pronated Grip", targetMuscle: "Lats", notes: "Wide grip, pull to upper chest — use if unable to do pull-ups", description: "Cable lat pulldown as pull-up substitute" },
+    { id: "sub-bk2-b", name: "Assisted Pull-Up", targetMuscle: "Lats", notes: "Use band or machine assistance — reduce assistance each week", trackWeight: false, repLabel: "Reps", description: "Band or machine assisted pull-up" },
+  ],
   bk1: [ // Conventional Deadlift
     { id: "sub-bk1a", name: "Romanian Deadlift", targetMuscle: "Full Back", notes: "Hinge focus — great if lower back is fatigued from heavy pulls", description: "Romanian deadlift" },
     { id: "sub-bk1b", name: "Trap Bar Deadlift", targetMuscle: "Full Back", notes: "More upright torso, neutral grip — easier on the lower back", description: "Trap bar deadlift" },
@@ -454,13 +458,13 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
     { id: "sub-bk3a", name: "Lat Pull Down - Supinated Grip", targetMuscle: "Lats", notes: "Underhand grip — many feel this more in the lats", description: "Supinated grip lat pulldown" },
     { id: "sub-bk3b", name: "Pull-Up", targetMuscle: "Lats", notes: "Bodyweight pull-up — use assistance band if needed", trackWeight: false, repLabel: "Reps", description: "Bodyweight pull-up" },
   ],
-  bk4: [ // Seated Cable Row - V Bar
+  bk4: [ // Seated Cable Row
     { id: "sub-bk4a", name: "Wide Grip Seated Cable Row", targetMuscle: "Mid Back", notes: "Wide bar flares elbows — targets upper back and rhomboids more", description: "Wide-grip cable seated row" },
     { id: "sub-bk4b", name: "Chest-Supported Dumbbell Row", targetMuscle: "Mid Back", notes: "Chest on incline bench — fully removes lower back from the equation", description: "Incline chest-supported dumbbell row" },
   ],
   bk5: [ // Single Arm Dumbbell Row
     { id: "sub-bk5a", name: "T-Bar Row", targetMuscle: "Lats/Mid Back", notes: "Both arms — load heavier for volume", description: "T-bar row" },
-    { id: "sub-bk5b", name: "Seated Cable Row - V Bar", targetMuscle: "Lats/Mid Back", notes: "Cable provides constant tension unlike dumbbell", description: "Seated cable row with V-bar" },
+    { id: "sub-bk5b", name: "Seated Cable Row", targetMuscle: "Lats/Mid Back", notes: "Cable provides constant tension unlike dumbbell", description: "Seated cable row with V-bar" },
   ],
   bk6: [ // Face Pulls
     { id: "sub-bk6a", name: "Band Pull-Apart", targetMuscle: "Rear Delts", notes: "Pull band apart at chest height — great without cable machine", trackWeight: false, repLabel: "Reps", description: "Resistance band pull-apart" },
@@ -506,16 +510,16 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
     { id: "sub-am3a", name: "Spider Curl", targetMuscle: "Biceps", notes: "Lie chest-down on incline bench, curl from fully stretched — hits long head hard", description: "Incline bench spider curl" },
     { id: "sub-am3b", name: "Cable Curl", targetMuscle: "Biceps", notes: "Low cable, constant tension — great for the stretched position", description: "Cable bicep curl" },
   ],
-  am4: [ // Close-Grip Bench Press
-    { id: "sub-am4a", name: "Tricep Dips", targetMuscle: "Triceps", notes: "Upright torso to bias triceps — add weight between legs to progress", description: "Bodyweight or weighted tricep dips" },
-    { id: "sub-am4b", name: "Overhead Cable Tricep Extension", targetMuscle: "Triceps", notes: "Cable overhead — excellent long head stretch, pairs well with pushdowns", description: "Overhead cable tricep extension" },
+  am4: [ // Overhead Tricep Extension
+    { id: "sub-am4a", name: "Overhead Cable Tricep Extension", targetMuscle: "Triceps", notes: "Cable overhead — constant tension, excellent long head stretch", description: "Overhead cable tricep extension" },
+    { id: "sub-am4b", name: "Tricep Dips", targetMuscle: "Triceps", notes: "Upright torso to bias triceps — add weight between legs to progress", description: "Bodyweight or weighted tricep dips" },
   ],
   am5: [ // Dumbbell Preacher Hammer Curls
     { id: "sub-am5a", name: "Cross-Body Hammer Curl", targetMuscle: "Brachialis", notes: "Curl across body to opposite shoulder — neutral grip trains brachialis hard", description: "Cross-body dumbbell hammer curl" },
-    { id: "sub-am5b", name: "Rope Hammer Curl (Cable)", targetMuscle: "Brachialis", notes: "Rope on low cable, neutral grip — constant tension variation", description: "Cable rope hammer curl" },
+    { id: "sub-am5b", name: "Cable Hammer Curl", targetMuscle: "Brachialis", notes: "Rope on low cable, neutral grip — constant tension variation", description: "Cable rope hammer curl" },
   ],
   am6: [ // Tricep Push Down - Rope
-    { id: "sub-am6a", name: "Tricep Push Down - V Bar", targetMuscle: "Triceps", notes: "V-bar attachment, slight overhand grip — great for heavy sets", description: "V-bar cable tricep pushdown" },
+    { id: "sub-am6a", name: "Tricep Pushdown", targetMuscle: "Triceps", notes: "V-bar attachment, slight overhand grip — great for heavy sets", description: "V-bar cable tricep pushdown" },
     { id: "sub-am6b", name: "Skull Crushers", targetMuscle: "Triceps", notes: "Barbell or dumbbell — great compound tricep movement to swap in", description: "Skull crushers" },
   ],
 };
