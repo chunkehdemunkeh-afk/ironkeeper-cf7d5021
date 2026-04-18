@@ -10,6 +10,22 @@ const isPreviewHost =
   window.location.hostname.includes("id-preview--") ||
   window.location.hostname.includes("lovableproject.com");
 
+if (isInIframe || isPreviewHost) {
+  navigator.serviceWorker?.getRegistrations?.()
+    .then((registrations) => {
+      registrations.forEach((registration) => {
+        void registration.unregister();
+      });
+    })
+    .catch(() => {});
+
+  if ("caches" in window) {
+    caches.keys()
+      .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+      .catch(() => {});
+  }
+}
+
 // ── Shared update handler ──────────────────────────────────────────────────────
 // All three detection paths call this one function so the UX is consistent:
 //   1. Shows the "Updating Iron Keeper…" banner (UpdateBanner in App.tsx)
