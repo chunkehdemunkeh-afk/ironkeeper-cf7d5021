@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.45",
+    version: "1.6.46",
     date: "2026-04-18",
     title: "Updates & Fixes",
     changes: [
-      "Feat: muscle group pills in Add Exercise sheet",
+      "Feat: swipe-to-delete on workout history cards",
     ],
   },
   {
