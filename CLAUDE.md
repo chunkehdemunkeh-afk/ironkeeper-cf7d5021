@@ -70,7 +70,8 @@ Migrations live in `supabase/migrations/` and must be pushed with `npx supabase 
 - **Overlays:** use shadcn `Sheet` (bottom drawer), not `Dialog`, for overlays and detail views.
 - **Toasts:** use `sonner` (`import { toast } from "sonner"`) for all user feedback.
 - **Haptics:** call `hapticMedium()` / `hapticSuccess()` from `src/lib/haptics.ts` on significant interactions (set completion, save, delete). Uses the Vibration API — no-ops on desktop.
-- **Swipe gestures:** Framer Motion `drag="x"` with `dragConstraints` — used in `WorkoutSession`, `FoodTracker`, and `WorkoutBuilder`. Pair with `touchAction: "pan-y"` to preserve vertical scroll. When swipe-to-delete lives inside a `Reorder.Group`, set `dragListener={false}` on `Reorder.Item` and use `useDragControls` on the grip handle — otherwise the two drag axes conflict.
+- **Swipe gestures:** Framer Motion `drag="x"` with `dragConstraints` — used in `WorkoutSession`, `FoodTracker`, `WorkoutBuilder`, `WeekStrip`, and `WorkoutCard` (history). Pair with `touchAction: "pan-y"` to preserve vertical scroll. When swipe-to-delete lives inside a `Reorder.Group`, set `dragListener={false}` on `Reorder.Item` and use `useDragControls` on the grip handle — otherwise the two drag axes conflict.
+- **Swipe-to-delete pattern:** Red destructive background must use `useTransform(x, [-100, -30], [1, 0])` for opacity — **do not** use a fully-opaque absolute div behind a transparent sliding div; it bleeds through. The sliding div must use `bg-card` or equivalent opaque background.
 - **Animations:** Framer Motion throughout — page transitions, list reordering (`Reorder`), collapse/expand. Keep motion consistent with existing patterns.
 
 ## Git Workflow
@@ -96,5 +97,9 @@ git stash && git pull --rebase origin main && git stash pop && git push origin m
 ## Gotchas
 
 - **LucideIcon serialization:** LucideIcon components are `forwardRef` objects — `JSON.stringify` drops functions and Symbols, so `icon` becomes `{}` in localStorage. `getAllCustomWorkouts()` in `workout-data.ts` patches every loaded workout with `icon: Dumbbell` to fix this. Any code that stores or renders custom workout icons must account for it.
-- **Custom workout search pool:** `WorkoutBuilder.tsx` builds `ALL_EXERCISES` at module load from WORKOUTS + ACCESSORY_ROUTINES + EXERCISE_LIBRARY (deduplicated by lowercase name). If new exercise sources are added, include them in that build loop or they won't appear in the builder search.
+- **Custom workout search pool:** `WorkoutBuilder.tsx` builds `ALL_EXERCISES` at module load from WORKOUTS + ACCESSORY_ROUTINES + EXERCISE_LIBRARY (deduplicated by lowercase name). `WorkoutSession.tsx` builds a parallel `ALL_SWAP_EXERCISES` pool for the swap sheet and Add Exercise sheet. If new exercise sources are added, include them in both build loops.
 - **`exercise-substitutions.ts` key sync:** Substitution keys must match exercise IDs in `workout-data.ts` exactly. When an exercise ID changes, update the corresponding key in substitutions or the swap sheet silently shows nothing.
+- **Exercise naming:** Use "Flies"/"Fly" not "Flyes"/"Flye" — all library entries were updated. IDs still contain the old spelling (e.g. `lib-db-Dumbbell_Flyes`) — do not rename IDs.
+- **WeekStrip deletes:** Workout sessions deleted from WeekStrip use `deleteWorkoutFromCloud` (same function as History page). Activity logs use `deleteActivityLog`. Both trigger a `setRefreshKey` increment to re-fetch.
+- **Add Exercise to session:** `WorkoutSession` supports adding any exercise mid-session via a search Sheet with muscle group pill filters. Added exercises are stored in `addedExercises: Exercise[]` state and persisted in the auto-save localStorage key alongside `addedAccessories`. Swipe-to-delete removes from `addedExercises` + `exerciseOrder` + `setLogs`.
+- **Accessory routines:** Icon for each routine is derived via `accessoryIcon(routine.id)` in `WorkoutSession` — maps `acc-abs`→Flame, `acc-grip`→Hand, others→Zap. The `emoji` field on `AccessoryRoutine` is no longer rendered in the session UI.
