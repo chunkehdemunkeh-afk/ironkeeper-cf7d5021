@@ -1,12 +1,44 @@
 import { WEEK_DAYS, WORKOUTS } from "@/lib/workout-data";
-import { fetchWorkoutHistory, fetchActivityLogs, saveActivityLog, deleteActivityLog, ACTIVITY_PRESETS, type ActivityLog } from "@/lib/cloud-data";
+import { fetchWorkoutHistory, fetchActivityLogs, saveActivityLog, deleteActivityLog, deleteWorkoutFromCloud, ACTIVITY_PRESETS, type ActivityLog } from "@/lib/cloud-data";
 import type { CompletedWorkout } from "@/lib/workout-data";
 import { useEffect, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, animate, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
+import type { PanInfo } from "framer-motion";
 import { CheckCircle2, Circle, X, Dumbbell, Clock, Bed, Plus, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { hapticMedium } from "@/lib/haptics";
+
+function SwipeToDeleteCard({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
+  const x = useMotionValue(0);
+  const bgOpacity = useTransform(x, [-110, -40], [1, 0]);
+
+  function handleDragEnd(_: any, info: PanInfo) {
+    if (info.offset.x < -90) {
+      onDelete();
+    } else {
+      animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
+    }
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      <motion.div style={{ opacity: bgOpacity }} className="absolute inset-0 flex items-center justify-end pr-4 bg-destructive rounded-xl">
+        <Trash2 className="h-4 w-4 text-white" />
+      </motion.div>
+      <motion.div
+        style={{ x, touchAction: "pan-y" }}
+        drag="x"
+        dragConstraints={{ left: -120, right: 0 }}
+        dragElastic={{ left: 0.1, right: 0 }}
+        onDragEnd={handleDragEnd}
+        className="glass-card rounded-xl p-3.5"
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+}
 
 export default function WeekStrip() {
   const todayIndex = new Date().getDay();
@@ -107,6 +139,15 @@ export default function WeekStrip() {
     }
   };
 
+  const handleDeleteWorkout = async (id: string) => {
+    const success = await deleteWorkoutFromCloud(id);
+    if (success) {
+      toast.success("Workout removed");
+      setRefreshKey((k) => k + 1);
+      setSelectedDay(null);
+    }
+  };
+
   const handleDayTap = (i: number) => {
     const hasWorkout = completedDays[i] && completedDays[i].length > 0;
     const hasActivity = activityDays[i] && activityDays[i].length > 0;
@@ -196,7 +237,7 @@ export default function WeekStrip() {
               {selectedWorkouts.map((w) => {
                 const Icon = WORKOUTS.find((wk) => wk.id === w.workoutId)?.icon || Dumbbell;
                 return (
-                  <div key={w.id} className="glass-card rounded-xl p-3.5 space-y-2.5">
+                  <SwipeToDeleteCard key={w.id} onDelete={() => handleDeleteWorkout(w.id)}>
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
                         <Icon className="h-4.5 w-4.5 text-primary" />
@@ -218,9 +259,8 @@ export default function WeekStrip() {
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
-
                     {w.sets.length > 0 && (
-                      <div className="space-y-1">
+                      <div className="space-y-1 mt-2.5">
                         {Object.entries(
                           w.sets.reduce<Record<string, { exerciseId: string; reps: number; weight: number }[]>>((acc, s) => {
                             const ex = getExerciseMeta(s.exerciseId);
@@ -239,7 +279,7 @@ export default function WeekStrip() {
                         ))}
                       </div>
                     )}
-                  </div>
+                  </SwipeToDeleteCard>
                 );
               })}
 
@@ -247,7 +287,7 @@ export default function WeekStrip() {
               {selectedActivities.map((a) => {
                 const preset = ACTIVITY_PRESETS.find(p => p.type === a.activityType);
                 return (
-                  <div key={a.id} className="glass-card rounded-xl p-3.5">
+                  <SwipeToDeleteCard key={a.id} onDelete={() => handleDeleteActivity(a.id)}>
                     <div className="flex items-center gap-3">
                       <div className={`flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 text-lg ${
                         a.activityType === "rest" ? "bg-blue-500/10" : "bg-amber-500/10"
@@ -269,19 +309,13 @@ export default function WeekStrip() {
                         </div>
                       </div>
                       <button
-                        onClick={() => handleDeleteActivity(a.id)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                      <button
                         onClick={() => setSelectedDay(null)}
                         className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                  </div>
+                  </SwipeToDeleteCard>
                 );
               })}
 
