@@ -545,73 +545,72 @@ export default function WorkoutSession() {
   };
 
   const toggleSet = useCallback((exerciseId: string, setIdx: number) => {
-    setSetLogs((prev) => {
-      const updated = { ...prev };
-      const sets = [...updated[exerciseId]];
-      const wasCompleted = sets[setIdx].completed;
-      sets[setIdx] = { ...sets[setIdx], completed: !wasCompleted };
-      updated[exerciseId] = sets;
-      if (!wasCompleted) {
-        hapticMedium();
-        setRestTimerActive(true);
-        setRestTimerKey((k) => k + 1);
+    const currentSets = setLogs[exerciseId] || [];
+    if (!currentSets[setIdx]) return;
 
-        // Check for new personal record
-        const currentWeight = sets[setIdx].weight;
-        const exercise = allExercises.find(e => e.id === exerciseId);
-        if (currentWeight > 0 && exercise?.trackWeight !== false) {
-          const historicalBest = historicalPRsRef.current[exerciseId]?.weight ?? 0;
-          const sessionBest = sessionBestRef.current[exerciseId] ?? 0;
-          if (currentWeight > Math.max(historicalBest, sessionBest)) {
-            sessionBestRef.current[exerciseId] = currentWeight;
-            setCelebrationPR({ name: exercise?.name || exerciseId, weight: currentWeight, reps: sets[setIdx].reps });
-          }
-        }
+    const wasCompleted = currentSets[setIdx].completed;
+    const newSets = currentSets.map((s, i) =>
+      i === setIdx ? { ...s, completed: !wasCompleted } : s
+    );
 
-        // Determine rep thresholds based on exercise target range
-        const isAccessoryRange = exercise?.reps?.includes("12-15");
-        const upThreshold = isAccessoryRange ? 15 : 12;
-        const downThreshold = isAccessoryRange ? 12 : 8;
+    // Pure state update
+    setSetLogs(prev => ({ ...prev, [exerciseId]: newSets }));
 
-        // Check if reps >= threshold → suggest weight increase
-        if (sets[setIdx].reps >= upThreshold) {
-          const exName = exercise?.name || exerciseId;
-          toast.info(`💪 ${exName} — Set ${setIdx + 1} hit ${sets[setIdx].reps} reps! Consider adding weight next session.`);
-          setWeightUpSuggestions((prev) => {
-            const existing = prev[exerciseId] || [];
-            if (!existing.includes(setIdx)) {
-              return { ...prev, [exerciseId]: [...existing, setIdx] };
-            }
-            return prev;
-          });
-        }
+    if (!wasCompleted) {
+      hapticMedium();
+      setRestTimerActive(true);
+      setRestTimerKey(k => k + 1);
 
-        // Check if reps < threshold → suggest weight decrease
-        if (sets[setIdx].reps > 0 && sets[setIdx].reps < downThreshold) {
-          const exName = exercise?.name || exerciseId;
-          toast.warning(`⚠️ ${exName} — Set ${setIdx + 1} only ${sets[setIdx].reps} reps. Consider lowering weight next session.`);
-          setWeightDownSuggestions((prev) => {
-            const existing = prev[exerciseId] || [];
-            if (!existing.includes(setIdx)) {
-              return { ...prev, [exerciseId]: [...existing, setIdx] };
-            }
-            return prev;
-          });
-        }
+      const currentWeight = newSets[setIdx].weight;
+      const exercise = allExercises.find(e => e.id === exerciseId);
 
-        // Auto-expand next exercise if this was the last set
-        const allSetsNowDone = sets.every((s) => s.completed);
-        if (allSetsNowDone) {
-          const currentOrderIdx = exerciseOrder.indexOf(exerciseId);
-          if (currentOrderIdx >= 0 && currentOrderIdx < exerciseOrder.length - 1) {
-            const nextExId = exerciseOrder[currentOrderIdx + 1];
-            setExpandedExercise(nextExId);
-          }
+      // Check for new personal record
+      if (currentWeight > 0 && exercise?.trackWeight !== false) {
+        const historicalBest = historicalPRsRef.current[exerciseId]?.weight ?? 0;
+        const sessionBest = sessionBestRef.current[exerciseId] ?? 0;
+        if (currentWeight > Math.max(historicalBest, sessionBest)) {
+          sessionBestRef.current[exerciseId] = currentWeight;
+          setCelebrationPR({ name: exercise?.name || exerciseId, weight: currentWeight, reps: newSets[setIdx].reps });
         }
       }
-      return updated;
-    });
-  }, [workout, exerciseOrder, allExercises]);
+
+      // Determine rep thresholds based on exercise target range
+      const isAccessoryRange = exercise?.reps?.includes("12-15");
+      const upThreshold = isAccessoryRange ? 15 : 12;
+      const downThreshold = isAccessoryRange ? 12 : 8;
+
+      // Suggest weight increase if reps hit the top of the range
+      if (newSets[setIdx].reps >= upThreshold) {
+        const exName = exercise?.name || exerciseId;
+        toast.info(`💪 ${exName} — Set ${setIdx + 1} hit ${newSets[setIdx].reps} reps! Consider adding weight next session.`);
+        setWeightUpSuggestions(prev => {
+          const existing = prev[exerciseId] || [];
+          if (!existing.includes(setIdx)) return { ...prev, [exerciseId]: [...existing, setIdx] };
+          return prev;
+        });
+      }
+
+      // Suggest weight decrease if reps fell below the bottom of the range
+      if (newSets[setIdx].reps > 0 && newSets[setIdx].reps < downThreshold) {
+        const exName = exercise?.name || exerciseId;
+        toast.warning(`⚠️ ${exName} — Set ${setIdx + 1} only ${newSets[setIdx].reps} reps. Consider lowering weight next session.`);
+        setWeightDownSuggestions(prev => {
+          const existing = prev[exerciseId] || [];
+          if (!existing.includes(setIdx)) return { ...prev, [exerciseId]: [...existing, setIdx] };
+          return prev;
+        });
+      }
+
+      // Auto-expand next exercise if this was the last set
+      const allSetsNowDone = newSets.every(s => s.completed);
+      if (allSetsNowDone) {
+        const currentOrderIdx = exerciseOrder.indexOf(exerciseId);
+        if (currentOrderIdx >= 0 && currentOrderIdx < exerciseOrder.length - 1) {
+          setExpandedExercise(exerciseOrder[currentOrderIdx + 1]);
+        }
+      }
+    }
+  }, [setLogs, exerciseOrder, allExercises]);
 
   const updateSetField = useCallback(
     (exerciseId: string, setIdx: number, field: "reps" | "weight", value: number) => {
