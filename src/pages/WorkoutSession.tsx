@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { WORKOUTS, type CompletedWorkout } from "@/lib/workout-data";
+import { WORKOUTS, type CompletedWorkout, type Exercise } from "@/lib/workout-data";
 import { getAllCustomWorkouts } from "@/pages/WorkoutBuilder";
 import { saveWorkoutToCloud, fetchLastSessionData, fetchExerciseLastData } from "@/lib/cloud-data";
-import { ArrowLeft, Check, Timer, ChevronDown, ChevronUp, Trophy, Play, RotateCcw, TrendingUp, TrendingDown, GripVertical, Shuffle, Star, MessageSquare, Plus, Trash2, Flame, Grip, History, Search } from "lucide-react";
+import { ArrowLeft, Check, Timer, ChevronDown, ChevronUp, Trophy, Play, RotateCcw, TrendingUp, TrendingDown, GripVertical, Shuffle, Star, MessageSquare, Plus, Trash2, Flame, Grip, History, Search, Hand, Zap, Dumbbell } from "lucide-react";
 import { motion, AnimatePresence, Reorder, useDragControls, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { toast } from "sonner";
 import RestTimer from "@/components/RestTimer";
@@ -66,6 +66,12 @@ function attachmentKey(att: string) {
 }
 
 /** Returns true for any cable-stack or lat machine exercise that benefits from attachment tracking */
+function accessoryIcon(id: string) {
+  if (id === "acc-abs") return Flame;
+  if (id === "acc-grip") return Hand;
+  return Zap;
+}
+
 function isCableAttachmentExercise(name: string): boolean {
   const dn = name.toLowerCase();
   return [
@@ -257,6 +263,9 @@ export default function WorkoutSession() {
   const [weightUpSuggestions, setWeightUpSuggestions] = useState<Record<string, number[]>>({});
   const [weightDownSuggestions, setWeightDownSuggestions] = useState<Record<string, number[]>>({});
   const [addedAccessories, setAddedAccessories] = useState<string[]>([]);
+  const [addedExercises, setAddedExercises] = useState<Exercise[]>([]);
+  const [addExerciseOpen, setAddExerciseOpen] = useState(false);
+  const [addExerciseSearch, setAddExerciseSearch] = useState("");
   const [bodyweightExercises, setBodyweightExercises] = useState<Set<string>>(new Set());
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const autoSaveKey = workout ? `workout-autosave-${workout.id}` : null;
@@ -270,6 +279,7 @@ export default function WorkoutSession() {
       exerciseOrder,
       exerciseOverrides,
       addedAccessories,
+      addedExercises,
       bodyweightExercises: Array.from(bodyweightExercises),
       twoHandedExercises: Array.from(twoHandedExercises),
       heavyStackExercises: Array.from(heavyStackExercises),
@@ -285,7 +295,7 @@ export default function WorkoutSession() {
     } catch (e) {
       console.warn("Failed to auto-save workout:", e);
     }
-  }, [autoSaveKey, started, finished, showFeedback, setLogs, exerciseNotes, exerciseOrder, exerciseOverrides, addedAccessories, bodyweightExercises, twoHandedExercises, heavyStackExercises, elapsed, expandedExercise, weightUpSuggestions, weightDownSuggestions]);
+  }, [autoSaveKey, started, finished, showFeedback, setLogs, exerciseNotes, exerciseOrder, exerciseOverrides, addedAccessories, addedExercises, bodyweightExercises, twoHandedExercises, heavyStackExercises, elapsed, expandedExercise, weightUpSuggestions, weightDownSuggestions]);
 
   // Save on visibility change (user switching apps / leaving)
   useEffect(() => {
@@ -346,6 +356,7 @@ export default function WorkoutSession() {
         setExerciseOrder(parsed.exerciseOrder || []);
         setExerciseOverrides(parsed.exerciseOverrides || {});
         setAddedAccessories(parsed.addedAccessories || []);
+        setAddedExercises(parsed.addedExercises || []);
         setBodyweightExercises(new Set(parsed.bodyweightExercises || []));
         setTwoHandedExercises(new Set(parsed.twoHandedExercises || []));
         setHeavyStackExercises(new Set(parsed.heavyStackExercises || []));
@@ -395,7 +406,7 @@ export default function WorkoutSession() {
     const routine = ACCESSORY_ROUTINES.find(r => r.id === accId);
     return routine ? routine.exercises : [];
   });
-  const allExercises = workout ? [...workout.exercises, ...accessoryExercises] : [];
+  const allExercises = workout ? [...workout.exercises, ...accessoryExercises, ...addedExercises] : [];
 
   // Build superset group map: exerciseId → { groupLabel, exerciseIds, isFirst, isLast }
   const supersetMap = useMemo(() => {
@@ -467,6 +478,7 @@ export default function WorkoutSession() {
       }
     }
     // For regular exercises, remove just that one
+    setAddedExercises(prev => prev.filter(e => e.id !== exerciseId));
     setExerciseOrder(prev => prev.filter(id => id !== exerciseId));
     setSetLogs(prev => {
       const next = { ...prev };
@@ -491,6 +503,19 @@ export default function WorkoutSession() {
     hapticMedium();
     toast.success(`Added ${routine.name} accessory`);
   }, [addedAccessories]);
+
+  const addSingleExercise = useCallback((entry: { id: string; name: string; muscleGroup: string }) => {
+    const alreadyExists = allExercises.some(e => e.id === entry.id);
+    const newId = alreadyExists ? `${entry.id}-added-${Date.now()}` : entry.id;
+    const ex: Exercise = { id: newId, name: entry.name, sets: 3, reps: "10", targetMuscle: entry.muscleGroup };
+    setAddedExercises(prev => [...prev, ex]);
+    setSetLogs(prev => ({ ...prev, [newId]: Array.from({ length: 3 }, () => ({ reps: 0, weight: 0, completed: false })) }));
+    setExerciseOrder(prev => [...prev, newId]);
+    setAddExerciseOpen(false);
+    setAddExerciseSearch("");
+    hapticMedium();
+    toast.success(`Added ${entry.name}`);
+  }, [allExercises]);
 
   useEffect(() => {
     if (!started || finished) return;
@@ -1420,25 +1445,40 @@ export default function WorkoutSession() {
           })}
         </Reorder.Group>
 
-        {/* Add Accessory Routines */}
-        {ACCESSORY_ROUTINES.filter(r => !addedAccessories.includes(r.id)).length > 0 && (
-          <div className="space-y-2 mt-4">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Add Accessory</p>
-            <div className="flex gap-2">
-              {ACCESSORY_ROUTINES.filter(r => !addedAccessories.includes(r.id)).map(routine => (
-                <button
-                  key={routine.id}
-                  onClick={() => addAccessory(routine.id)}
-                  className="flex items-center gap-2 rounded-xl border border-dashed border-border/60 bg-card/50 px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-                >
-                  <span>{routine.emoji}</span>
-                  <span>{routine.name}</span>
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              ))}
-            </div>
+        {/* Add Accessory Work + Add Exercise */}
+        <div className="space-y-2 mt-4">
+          {ACCESSORY_ROUTINES.filter(r => !addedAccessories.includes(r.id)).length > 0 && (
+            <>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Add Accessory Work</p>
+              <div className="flex flex-wrap gap-2">
+                {ACCESSORY_ROUTINES.filter(r => !addedAccessories.includes(r.id)).map(routine => {
+                  const Icon = accessoryIcon(routine.id);
+                  return (
+                    <button
+                      key={routine.id}
+                      onClick={() => addAccessory(routine.id)}
+                      className="flex items-center gap-2 rounded-xl border border-dashed border-border/60 bg-card/50 px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{routine.name}</span>
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              onClick={() => setAddExerciseOpen(true)}
+              className="flex items-center gap-2 rounded-xl border border-dashed border-border/60 bg-card/50 px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+            >
+              <Dumbbell className="h-3.5 w-3.5" />
+              <span>Add Exercise</span>
+              <Plus className="h-3.5 w-3.5" />
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       <RestTimer key={restTimerKey} isActive={restTimerActive} initialSeconds={restDuration} onClose={() => setRestTimerActive(false)} onTimerEnd={() => toast("Rest complete! Time for the next set 💪")} />
@@ -1578,6 +1618,56 @@ export default function WorkoutSession() {
                   })()}
                 </div>
               </>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Add Exercise Sheet */}
+      <Sheet open={addExerciseOpen} onOpenChange={(open) => { if (!open) { setAddExerciseOpen(false); setAddExerciseSearch(""); } }}>
+        <SheetContent side="bottom" className="rounded-t-2xl bg-card border-border/50 max-h-[80vh]">
+          <SheetHeader>
+            <SheetTitle className="font-display text-lg text-foreground flex items-center gap-2">
+              <Dumbbell className="h-4 w-4 text-primary" />
+              Add Exercise
+            </SheetTitle>
+          </SheetHeader>
+          <div className="overflow-y-auto mt-4 space-y-3 pb-6">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                value={addExerciseSearch}
+                onChange={(e) => setAddExerciseSearch(e.target.value)}
+                placeholder="Search 800+ exercises..."
+                autoFocus
+                className="w-full h-10 rounded-xl bg-muted/50 border border-border/50 pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/50"
+              />
+            </div>
+            {addExerciseSearch.length > 1 ? (() => {
+              const results = ALL_SWAP_EXERCISES
+                .filter(ex => ex.name.toLowerCase().includes(addExerciseSearch.toLowerCase()))
+                .slice(0, 12);
+              return results.length > 0 ? (
+                <div className="space-y-1.5">
+                  {results.map((ex) => (
+                    <button
+                      key={ex.id}
+                      onClick={() => addSingleExercise(ex)}
+                      className="w-full text-left rounded-xl p-3 bg-secondary/50 border border-border/30 hover:bg-secondary/70 transition-colors"
+                    >
+                      <p className="text-sm font-medium text-foreground">{ex.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">{ex.muscleGroup}</span>
+                        {ex.equipment && <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">{ex.equipment}</span>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-4">No exercises found</p>
+              );
+            })() : (
+              <p className="text-xs text-muted-foreground text-center py-4">Start typing to search exercises</p>
             )}
           </div>
         </SheetContent>
