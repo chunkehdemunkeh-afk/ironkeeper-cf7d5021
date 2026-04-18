@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.40",
+    version: "1.6.41",
     date: "2026-04-18",
     title: "Updates & Fixes",
     changes: [
-      "Feat: swipe-to-delete exercises in WorkoutBuilder + unified exercise search pool",
+      "Fix: expand swap search to all exercises + rename Flyes→Flies / Flye→Fly",
     ],
   },
   {
