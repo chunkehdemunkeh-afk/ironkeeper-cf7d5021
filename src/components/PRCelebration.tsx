@@ -75,8 +75,17 @@ export default function PRCelebration({ pr, onDismiss }: Props) {
               </div>
 
               <div>
-                <p className="font-display text-5xl font-bold text-foreground">{pr.weight}<span className="text-2xl text-muted-foreground ml-1">kg</span></p>
-                <p className="text-sm text-muted-foreground mt-1">{pr.reps} {pr.reps === 1 ? "rep" : "reps"}</p>
+                {pr.weight > 0 ? (
+                  <>
+                    <p className="font-display text-5xl font-bold text-foreground">{pr.weight}<span className="text-2xl text-muted-foreground ml-1">kg</span></p>
+                    <p className="text-sm text-muted-foreground mt-1">{pr.reps} {pr.reps === 1 ? "rep" : "reps"}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-display text-5xl font-bold text-foreground">{pr.reps}<span className="text-2xl text-muted-foreground ml-1">{pr.reps === 1 ? "rep" : "reps"}</span></p>
+                    <p className="text-sm text-muted-foreground mt-1">Bodyweight</p>
+                  </>
+                )}
               </div>
 
               <p className="text-xs text-muted-foreground/60 mt-1">Tap anywhere to dismiss</p>
