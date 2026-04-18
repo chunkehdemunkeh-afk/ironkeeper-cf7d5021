@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.39",
+    version: "1.6.40",
     date: "2026-04-18",
     title: "Updates & Fixes",
     changes: [
-      "Fix: patch icon on custom workout load — LucideIcon serialises to {} in JSON",
+      "Feat: swipe-to-delete exercises in WorkoutBuilder + unified exercise search pool",
     ],
   },
   {
