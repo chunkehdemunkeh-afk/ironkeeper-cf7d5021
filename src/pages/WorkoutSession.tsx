@@ -129,6 +129,7 @@ function ExerciseDragItem({
 }) {
   const dragControls = useDragControls();
   const swipeX = useMotionValue(0);
+  const deleteBgOpacity = useTransform(swipeX, [-100, -30], [1, 0]);
 
   function handleSwipeDragEnd(_: any, info: PanInfo) {
     if (onDelete && info.offset.x < -80) {
@@ -149,9 +150,12 @@ function ExerciseDragItem({
       {/* Swipe-to-delete: header row only */}
       <div className="relative overflow-hidden">
         {onDelete && (
-          <div className="absolute inset-0 flex items-center justify-end pr-4 bg-destructive/80 rounded-t-xl">
+          <motion.div
+            style={{ opacity: deleteBgOpacity }}
+            className="absolute inset-0 flex items-center justify-end pr-4 bg-destructive"
+          >
             <Trash2 className="h-4 w-4 text-white" />
-          </div>
+          </motion.div>
         )}
         <motion.div
           style={{ x: swipeX, touchAction: "pan-y" }}
@@ -159,7 +163,7 @@ function ExerciseDragItem({
           dragConstraints={{ left: -100, right: 0 }}
           dragElastic={{ left: 0.1, right: 0 }}
           onDragEnd={handleSwipeDragEnd}
-          className="relative bg-card/0 w-full flex items-center gap-2 p-3"
+          className="relative w-full flex items-center gap-2 p-3"
         >
           <div
             onPointerDown={(e) => dragControls.start(e)}
