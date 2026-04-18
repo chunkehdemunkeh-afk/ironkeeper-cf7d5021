@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, GripVertical, Save, Play, Dumbbell, Edit2, X } from "lucide-react";
-import { motion, Reorder } from "framer-motion";
+import { motion, Reorder, useMotionValue, animate, useDragControls } from "framer-motion";
+import type { PanInfo } from "framer-motion";
 import { toast } from "sonner";
 import { hapticMedium, hapticSuccess } from "@/lib/haptics";
-import type { Exercise, WorkoutDay } from "@/lib/workout-data";
+import { WORKOUTS, type Exercise, type WorkoutDay } from "@/lib/workout-data";
+import { ACCESSORY_ROUTINES } from "@/lib/accessory-routines";
 import { EXERCISE_LIBRARY, MUSCLE_GROUPS_ALL } from "@/lib/exercise-library";
 
 const MUSCLE_GROUPS = MUSCLE_GROUPS_ALL.filter((g) => g !== "All");
@@ -22,6 +24,40 @@ const EMOJIS = ["🧤", "⚡", "🏃", "🦵", "💪", "🎯", "🛡️", "🔥"
 
 const STORAGE_KEY = "ironkeeper_custom_workouts";
 
+// ── Combined searchable exercise pool ─────────────────────────────────────────
+// Includes all pre-built workout exercises + the imported library, deduplicated by name.
+type SearchEntry = { name: string; muscleGroup: string; equipment?: string };
+
+const _seenNames = new Set<string>();
+const ALL_EXERCISES: SearchEntry[] = [];
+
+for (const w of WORKOUTS) {
+  for (const ex of w.exercises) {
+    const key = ex.name.toLowerCase();
+    if (!_seenNames.has(key)) {
+      _seenNames.add(key);
+      ALL_EXERCISES.push({ name: ex.name, muscleGroup: ex.targetMuscle });
+    }
+  }
+}
+for (const r of ACCESSORY_ROUTINES) {
+  for (const ex of r.exercises) {
+    const key = ex.name.toLowerCase();
+    if (!_seenNames.has(key)) {
+      _seenNames.add(key);
+      ALL_EXERCISES.push({ name: ex.name, muscleGroup: ex.targetMuscle });
+    }
+  }
+}
+for (const ex of EXERCISE_LIBRARY) {
+  const key = ex.name.toLowerCase();
+  if (!_seenNames.has(key)) {
+    _seenNames.add(key);
+    ALL_EXERCISES.push({ name: ex.name, muscleGroup: ex.muscleGroup, equipment: ex.equipment });
+  }
+}
+
+// ── localStorage helpers ───────────────────────────────────────────────────────
 function getCustomWorkouts(): WorkoutDay[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -39,6 +75,7 @@ export function getAllCustomWorkouts(): WorkoutDay[] {
   return getCustomWorkouts().map((w) => ({ ...w, icon: Dumbbell }));
 }
 
+// ── Exercise name input with unified search typeahead ─────────────────────────
 function ExerciseNameInput({
   value,
   onChange,
@@ -53,9 +90,9 @@ function ExerciseNameInput({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const results = query.length > 1
-    ? EXERCISE_LIBRARY.filter((e) =>
+    ? ALL_EXERCISES.filter((e) =>
         e.name.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 6)
+      ).slice(0, 7)
     : [];
 
   useEffect(() => { setQuery(value); }, [value]);
@@ -85,9 +122,9 @@ function ExerciseNameInput({
       />
       {open && results.length > 0 && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-xl bg-card border border-border/50 shadow-xl overflow-hidden">
-          {results.map((ex) => (
+          {results.map((ex, i) => (
             <button
-              key={ex.id}
+              key={i}
               onMouseDown={(e) => {
                 e.preventDefault();
                 setQuery(ex.name);
@@ -97,7 +134,9 @@ function ExerciseNameInput({
               className="w-full text-left px-3 py-2.5 hover:bg-secondary/50 transition-colors border-b border-border/20 last:border-0"
             >
               <p className="text-sm font-medium text-foreground">{ex.name}</p>
-              <p className="text-[10px] text-muted-foreground">{ex.muscleGroup} · {ex.equipment}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {ex.muscleGroup}{ex.equipment ? ` · ${ex.equipment}` : ""}
+              </p>
             </button>
           ))}
         </div>
@@ -106,6 +145,130 @@ function ExerciseNameInput({
   );
 }
 
+// ── Swipeable exercise row ─────────────────────────────────────────────────────
+function SwipeToDeleteRow({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
+  const x = useMotionValue(0);
+
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (info.offset.x < -80) {
+      onDelete();
+    } else {
+      animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      <div className="absolute inset-y-0 right-0 flex items-center px-5 bg-destructive rounded-xl">
+        <Trash2 className="h-4 w-4 text-white" />
+      </div>
+      <motion.div
+        style={{ x, touchAction: "pan-y" }}
+        drag="x"
+        dragConstraints={{ left: -110, right: 0 }}
+        dragElastic={{ left: 0.15, right: 0 }}
+        onDragEnd={handleDragEnd}
+        className="relative bg-card rounded-xl"
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+}
+
+// ── Draggable exercise item (vertical reorder + horizontal swipe-to-delete) ────
+function ExerciseItem({
+  ex,
+  index,
+  onUpdate,
+  onDelete,
+}: {
+  ex: Exercise;
+  index: number;
+  onUpdate: (id: string, field: keyof Exercise, value: string | number) => void;
+  onDelete: (id: string) => void;
+}) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={ex.id}
+      dragListener={false}
+      dragControls={dragControls}
+      className="list-none"
+    >
+      <SwipeToDeleteRow onDelete={() => onDelete(ex.id)}>
+        <div className="p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <div
+              onPointerDown={(e) => dragControls.start(e)}
+              className="cursor-grab active:cursor-grabbing touch-none shrink-0"
+            >
+              <GripVertical className="h-4 w-4 text-muted-foreground/40" />
+            </div>
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary shrink-0">
+              {index + 1}
+            </span>
+            <ExerciseNameInput
+              value={ex.name}
+              onChange={(n) => onUpdate(ex.id, "name", n)}
+              onSelectFromLibrary={(n, muscleGroup) => {
+                onUpdate(ex.id, "name", n);
+                onUpdate(ex.id, "targetMuscle", muscleGroup);
+              }}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 pl-8">
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Sets</label>
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={ex.sets}
+                onChange={(e) => onUpdate(ex.id, "sets", Number(e.target.value))}
+                className="w-full h-7 rounded-md bg-muted/50 border border-border/50 px-2 text-xs text-center text-foreground outline-none focus:ring-1 focus:ring-primary/50"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Reps</label>
+              <input
+                value={ex.reps}
+                onChange={(e) => onUpdate(ex.id, "reps", e.target.value)}
+                placeholder="8-10"
+                className="w-full h-7 rounded-md bg-muted/50 border border-border/50 px-2 text-xs text-center text-foreground outline-none focus:ring-1 focus:ring-primary/50"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Muscle</label>
+              <select
+                value={ex.targetMuscle}
+                onChange={(e) => onUpdate(ex.id, "targetMuscle", e.target.value)}
+                className="w-full h-7 rounded-md bg-muted/50 border border-border/50 px-1 text-[10px] text-foreground outline-none"
+              >
+                {MUSCLE_GROUPS.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="pl-8">
+            <input
+              value={ex.notes || ""}
+              onChange={(e) => onUpdate(ex.id, "notes", e.target.value)}
+              placeholder="Notes (optional)"
+              className="w-full h-7 rounded-md bg-muted/50 border border-border/50 px-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/50"
+            />
+          </div>
+        </div>
+      </SwipeToDeleteRow>
+    </Reorder.Item>
+  );
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────────
 export default function WorkoutBuilder() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -275,7 +438,9 @@ export default function WorkoutBuilder() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-base font-semibold">
-              Exercises {exercises.length > 0 && <span className="text-muted-foreground font-normal text-sm">({exercises.length})</span>}
+              Exercises{exercises.length > 0 && (
+                <span className="text-muted-foreground font-normal text-sm ml-1">({exercises.length})</span>
+              )}
             </h2>
             <button
               onClick={addExercise}
@@ -294,79 +459,13 @@ export default function WorkoutBuilder() {
             className="space-y-2"
           >
             {exercises.map((ex, i) => (
-              <Reorder.Item key={ex.id} value={ex.id} className="list-none">
-                <div className="glass-card rounded-xl p-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="cursor-grab active:cursor-grabbing touch-none shrink-0">
-                      <GripVertical className="h-4 w-4 text-muted-foreground/40" />
-                    </div>
-                    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary shrink-0">
-                      {i + 1}
-                    </span>
-                    <ExerciseNameInput
-                      value={ex.name}
-                      onChange={(n) => updateExercise(ex.id, "name", n)}
-                      onSelectFromLibrary={(n, muscleGroup) => {
-                        setExercises((prev) =>
-                          prev.map((e) =>
-                            e.id === ex.id ? { ...e, name: n, targetMuscle: muscleGroup } : e
-                          )
-                        );
-                      }}
-                    />
-                    <button
-                      onClick={() => removeExercise(ex.id)}
-                      className="text-destructive/60 hover:text-destructive shrink-0"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 pl-8">
-                    <div>
-                      <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Sets</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={10}
-                        value={ex.sets}
-                        onChange={(e) => updateExercise(ex.id, "sets", Number(e.target.value))}
-                        className="w-full h-7 rounded-md bg-muted/50 border border-border/50 px-2 text-xs text-center text-foreground outline-none focus:ring-1 focus:ring-primary/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Reps</label>
-                      <input
-                        value={ex.reps}
-                        onChange={(e) => updateExercise(ex.id, "reps", e.target.value)}
-                        placeholder="8-10"
-                        className="w-full h-7 rounded-md bg-muted/50 border border-border/50 px-2 text-xs text-center text-foreground outline-none focus:ring-1 focus:ring-primary/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Muscle</label>
-                      <select
-                        value={ex.targetMuscle}
-                        onChange={(e) => updateExercise(ex.id, "targetMuscle", e.target.value)}
-                        className="w-full h-7 rounded-md bg-muted/50 border border-border/50 px-1 text-[10px] text-foreground outline-none"
-                      >
-                        {MUSCLE_GROUPS.map((m) => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="pl-8">
-                    <input
-                      value={ex.notes || ""}
-                      onChange={(e) => updateExercise(ex.id, "notes", e.target.value)}
-                      placeholder="Notes (optional)"
-                      className="w-full h-7 rounded-md bg-muted/50 border border-border/50 px-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/50"
-                    />
-                  </div>
-                </div>
-              </Reorder.Item>
+              <ExerciseItem
+                key={ex.id}
+                ex={ex}
+                index={i}
+                onUpdate={updateExercise}
+                onDelete={removeExercise}
+              />
             ))}
           </Reorder.Group>
 
@@ -407,7 +506,9 @@ export default function WorkoutBuilder() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display text-sm font-semibold text-foreground truncate">{w.name}</h3>
-                    <p className="text-xs text-muted-foreground">{w.exercises.length} exercise{w.exercises.length !== 1 ? "s" : ""} · {w.focus}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {w.exercises.length} exercise{w.exercises.length !== 1 ? "s" : ""} · {w.focus}
+                    </p>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
                     <button

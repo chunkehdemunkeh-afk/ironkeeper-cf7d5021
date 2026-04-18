@@ -450,13 +450,9 @@ export const EXERCISE_SUBSTITUTIONS: Record<string, SubstituteExercise[]> = {
     { id: "sub-bk1a", name: "Romanian Deadlift", targetMuscle: "Full Back", notes: "Hinge focus — great if lower back is fatigued from heavy pulls", description: "Romanian deadlift" },
     { id: "sub-bk1b", name: "Trap Bar Deadlift", targetMuscle: "Full Back", notes: "More upright torso, neutral grip — easier on the lower back", description: "Trap bar deadlift" },
   ],
-  bk2: [ // Barbell Row
-    { id: "sub-bk2a", name: "Single Arm Dumbbell Row", targetMuscle: "Mid Back", notes: "Unilateral — great for addressing strength imbalances", description: "Single-arm dumbbell row" },
-    { id: "sub-bk2b", name: "T-Bar Row", targetMuscle: "Mid Back", notes: "Great for back thickness — handle options allow different grips", description: "T-bar row" },
-  ],
-  bk3: [ // Lat Pull Down - Pronated Grip
-    { id: "sub-bk3a", name: "Lat Pull Down - Supinated Grip", targetMuscle: "Lats", notes: "Underhand grip — many feel this more in the lats", description: "Supinated grip lat pulldown" },
-    { id: "sub-bk3b", name: "Pull-Up", targetMuscle: "Lats", notes: "Bodyweight pull-up — use assistance band if needed", trackWeight: false, repLabel: "Reps", description: "Bodyweight pull-up" },
+  bk3: [ // Barbell Row
+    { id: "sub-bk3a", name: "Single Arm Dumbbell Row", targetMuscle: "Mid Back", notes: "Unilateral — great for addressing strength imbalances", description: "Single-arm dumbbell row" },
+    { id: "sub-bk3b", name: "T-Bar Row", targetMuscle: "Mid Back", notes: "Great for back thickness — handle options allow different grips", description: "T-bar row" },
   ],
   bk4: [ // Seated Cable Row
     { id: "sub-bk4a", name: "Wide Grip Seated Cable Row", targetMuscle: "Mid Back", notes: "Wide bar flares elbows — targets upper back and rhomboids more", description: "Wide-grip cable seated row" },
