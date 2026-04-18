@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.48",
+    version: "1.6.49",
     date: "2026-04-18",
     title: "Updates & Fixes",
     changes: [
-      "Docs: update CLAUDE.md with session learnings",
+      "Feat: PR celebration popup + swipe-to-delete PRs in Progress",
     ],
   },
   {
