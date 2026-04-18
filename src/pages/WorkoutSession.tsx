@@ -215,14 +215,15 @@ function ExerciseDragItem({
   );
 }
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { fetchPersonalRecords } from "@/lib/cloud-data";
 import PRCelebration from "@/components/PRCelebration";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function WorkoutSession() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const workout = WORKOUTS.find((w) => w.id === id) || getAllCustomWorkouts().find((w) => w.id === id);
 
