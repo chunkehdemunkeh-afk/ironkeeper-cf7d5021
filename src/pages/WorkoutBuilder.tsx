@@ -36,7 +36,7 @@ function saveCustomWorkouts(workouts: WorkoutDay[]) {
 }
 
 export function getAllCustomWorkouts(): WorkoutDay[] {
-  return getCustomWorkouts();
+  return getCustomWorkouts().map((w) => ({ ...w, icon: Dumbbell }));
 }
 
 function ExerciseNameInput({
