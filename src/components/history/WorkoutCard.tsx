@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { WORKOUTS, type CompletedWorkout } from "@/lib/workout-data";
-import { Clock, Check, Trash2, ChevronDown, ChevronUp, AlertTriangle, Star, MessageSquare, Dumbbell, Trophy } from "lucide-react";
+import { Clock, Check, Trash2, ChevronDown, ChevronUp, AlertTriangle, Star, MessageSquare, Dumbbell } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, animate, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
+import type { PanInfo } from "framer-motion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,18 @@ interface WorkoutCardProps {
 
 export default function WorkoutCard({ workout: w, icon: Icon, onDelete, isDeleting, defaultExpanded = false }: WorkoutCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const x = useMotionValue(0);
+  const deleteBgOpacity = useTransform(x, [-110, -40], [1, 0]);
+
+  function handleDragEnd(_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
+    if (info.offset.x < -90) {
+      animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
+      setShowDeleteDialog(true);
+    } else {
+      animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
+    }
+  }
 
   const allExercises = WORKOUTS.flatMap((wk) => wk.exercises);
   const getExerciseMeta = (id: string) => allExercises.find((e) => e.id === id);
@@ -60,15 +73,28 @@ export default function WorkoutCard({ workout: w, icon: Icon, onDelete, isDeleti
   const effortLabels = ["", "Easy", "Light", "Moderate", "Hard", "Max effort"];
 
   return (
+    <>
     <motion.div
       layout
       className={`glass-card rounded-2xl overflow-hidden transition-all ${isDeleting ? "opacity-50 pointer-events-none" : ""}`}
     >
-      {/* ── Header banner ── */}
-      <div
-        className="p-4 cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
+      {/* ── Swipeable header ── */}
+      <div className="relative overflow-hidden">
+        <motion.div
+          style={{ opacity: deleteBgOpacity }}
+          className="absolute inset-0 flex items-center justify-end pr-5 bg-destructive rounded-t-2xl"
+        >
+          <Trash2 className="h-5 w-5 text-white" />
+        </motion.div>
+        <motion.div
+          style={{ x, touchAction: "pan-y" }}
+          drag="x"
+          dragConstraints={{ left: -120, right: 0 }}
+          dragElastic={{ left: 0.1, right: 0 }}
+          onDragEnd={handleDragEnd}
+          className="relative p-4 cursor-pointer"
+          onClick={() => setExpanded(!expanded)}
+        >
         {/* Top row: icon + name + chevron */}
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0">
@@ -109,6 +135,7 @@ export default function WorkoutCard({ workout: w, icon: Icon, onDelete, isDeleti
             </div>
           )}
         </div>
+        </motion.div>
       </div>
 
       {/* ── Expanded exercise breakdown ── */}
@@ -228,40 +255,35 @@ export default function WorkoutCard({ workout: w, icon: Icon, onDelete, isDeleti
                 </div>
               )}
 
-              {/* Delete */}
-              <div className="flex justify-end pt-1">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-lg hover:bg-destructive/10">
-                      <Trash2 className="h-3 w-3" /> Delete session
-                    </button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="max-w-sm rounded-2xl">
-                    <AlertDialogHeader>
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10 mb-1">
-                        <AlertTriangle className="h-5 w-5 text-destructive" />
-                      </div>
-                      <AlertDialogTitle>Delete workout session?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete your <span className="font-medium text-foreground">{w.workoutName}</span> session and all its set data. This cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => onDelete(w.id)}
-                        className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
+
+    {/* Delete confirmation dialog — triggered by swipe */}
+    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialogContent className="max-w-sm rounded-2xl">
+        <AlertDialogHeader>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10 mb-1">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+          </div>
+          <AlertDialogTitle>Delete workout session?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently delete your <span className="font-medium text-foreground">{w.workoutName}</span> session and all its set data. This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => { setShowDeleteDialog(false); onDelete(w.id); }}
+            className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
