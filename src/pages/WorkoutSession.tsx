@@ -264,6 +264,7 @@ export default function WorkoutSession() {
   const [addedExercises, setAddedExercises] = useState<Exercise[]>([]);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
   const [addExerciseSearch, setAddExerciseSearch] = useState("");
+  const [addExerciseMuscle, setAddExerciseMuscle] = useState<string | null>(null);
   const [bodyweightExercises, setBodyweightExercises] = useState<Set<string>>(new Set());
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const autoSaveKey = workout ? `workout-autosave-${workout.id}` : null;
@@ -1622,7 +1623,7 @@ export default function WorkoutSession() {
       </Sheet>
 
       {/* Add Exercise Sheet */}
-      <Sheet open={addExerciseOpen} onOpenChange={(open) => { if (!open) { setAddExerciseOpen(false); setAddExerciseSearch(""); } }}>
+      <Sheet open={addExerciseOpen} onOpenChange={(open) => { if (!open) { setAddExerciseOpen(false); setAddExerciseSearch(""); setAddExerciseMuscle(null); } }}>
         <SheetContent side="bottom" className="rounded-t-2xl bg-card border-border/50 max-h-[80vh]">
           <SheetHeader>
             <SheetTitle className="font-display text-lg text-foreground flex items-center gap-2">
@@ -1630,43 +1631,62 @@ export default function WorkoutSession() {
               Add Exercise
             </SheetTitle>
           </SheetHeader>
-          <div className="overflow-y-auto mt-4 space-y-3 pb-6">
-            <div className="relative">
+          <div className="flex flex-col gap-3 mt-4 h-[calc(80vh-80px)]">
+            {/* Search */}
+            <div className="relative shrink-0">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
               <input
                 value={addExerciseSearch}
-                onChange={(e) => setAddExerciseSearch(e.target.value)}
+                onChange={(e) => { setAddExerciseSearch(e.target.value); if (e.target.value) setAddExerciseMuscle(null); }}
                 placeholder="Search 800+ exercises..."
                 autoFocus
                 className="w-full h-10 rounded-xl bg-muted/50 border border-border/50 pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
-            {addExerciseSearch.length > 1 ? (() => {
-              const results = ALL_SWAP_EXERCISES
-                .filter(ex => ex.name.toLowerCase().includes(addExerciseSearch.toLowerCase()))
-                .slice(0, 12);
-              return results.length > 0 ? (
-                <div className="space-y-1.5">
-                  {results.map((ex) => (
-                    <button
-                      key={ex.id}
-                      onClick={() => addSingleExercise(ex)}
-                      className="w-full text-left rounded-xl p-3 bg-secondary/50 border border-border/30 hover:bg-secondary/70 transition-colors"
-                    >
-                      <p className="text-sm font-medium text-foreground">{ex.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">{ex.muscleGroup}</span>
-                        {ex.equipment && <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">{ex.equipment}</span>}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">No exercises found</p>
-              );
-            })() : (
-              <p className="text-xs text-muted-foreground text-center py-4">Start typing to search exercises</p>
+            {/* Muscle group pills */}
+            {!addExerciseSearch && (
+              <div className="flex gap-2 overflow-x-auto pb-1 shrink-0 scrollbar-hide">
+                {["Chest","Back","Shoulders","Biceps","Triceps","Quads","Hamstrings","Glutes","Calves","Abs","Forearms","Cardio"].map(group => (
+                  <button
+                    key={group}
+                    onClick={() => setAddExerciseMuscle(prev => prev === group ? null : group)}
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${addExerciseMuscle === group ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 text-muted-foreground border-border/50 hover:border-primary/40 hover:text-foreground"}`}
+                  >
+                    {group}
+                  </button>
+                ))}
+              </div>
             )}
+            {/* Results */}
+            <div className="overflow-y-auto space-y-1.5 pb-6">
+              {(() => {
+                const hasSearch = addExerciseSearch.length > 1;
+                const hasMuscle = !!addExerciseMuscle;
+                if (!hasSearch && !hasMuscle) {
+                  return <p className="text-xs text-muted-foreground text-center py-4">Search or pick a muscle group above</p>;
+                }
+                const results = ALL_SWAP_EXERCISES
+                  .filter(ex => {
+                    const matchesSearch = !hasSearch || ex.name.toLowerCase().includes(addExerciseSearch.toLowerCase());
+                    const matchesMuscle = !hasMuscle || ex.muscleGroup.toLowerCase().includes(addExerciseMuscle!.toLowerCase());
+                    return matchesSearch && matchesMuscle;
+                  })
+                  .slice(0, 20);
+                return results.length > 0 ? results.map(ex => (
+                  <button
+                    key={ex.id}
+                    onClick={() => addSingleExercise(ex)}
+                    className="w-full text-left rounded-xl p-3 bg-secondary/50 border border-border/30 hover:bg-secondary/70 transition-colors"
+                  >
+                    <p className="text-sm font-medium text-foreground">{ex.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">{ex.muscleGroup}</span>
+                      {ex.equipment && <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">{ex.equipment}</span>}
+                    </div>
+                  </button>
+                )) : <p className="text-xs text-muted-foreground text-center py-4">No exercises found</p>;
+              })()}
+            </div>
           </div>
         </SheetContent>
       </Sheet>
