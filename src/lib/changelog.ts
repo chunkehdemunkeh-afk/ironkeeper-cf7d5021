@@ -12,11 +12,11 @@ export interface ChangelogEntry {
  */
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.6.49",
+    version: "1.6.50",
     date: "2026-04-18",
     title: "Updates & Fixes",
     changes: [
-      "Feat: PR celebration popup + swipe-to-delete PRs in Progress",
+      "Fix: add useAuth to WorkoutSession for PR detection user context",
     ],
   },
   {
